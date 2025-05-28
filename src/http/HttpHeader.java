@@ -1,3 +1,5 @@
+package http;
+
 public class HttpHeader {
 
     public static final String CONTENT_TYPE = "Content-Type";
