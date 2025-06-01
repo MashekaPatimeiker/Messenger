@@ -1,4 +1,4 @@
-package http;
+package http.httpdiff;
 
 import java.util.HashMap;
 import java.util.Map;

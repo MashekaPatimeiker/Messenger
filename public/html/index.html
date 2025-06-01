@@ -3,400 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elegant Portfolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <title>Web Server Demo</title>
     <style>
-        :root {
-            --primary-color: #6c63ff;
-            --secondary-color: #4d44db;
-            --dark-color: #2f2e41;
-            --light-color: #f8f9fa;
-            --accent-color: #ff6584;
-            --transition: all 0.3s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Montserrat', sans-serif;
-            line-height: 1.6;
-            color: var(--dark-color);
-            background-color: var(--light-color);
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1200px;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        h1, h2 {
+            color: #333;
         }
 
-        header {
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        .modal {
+            display: none;
             position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-        }
-
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-color);
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-        }
-
-        .nav-links li {
-            margin-left: 30px;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--dark-color);
-            font-weight: 600;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .nav-links a:hover {
-            color: var(--primary-color);
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            background: var(--primary-color);
-            bottom: -5px;
+            z-index: 1;
             left: 0;
-            transition: var(--transition);
-        }
-
-        .nav-links a:hover::after {
+            top: 0;
             width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
         }
-
-        .hero {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            padding-top: 80px;
-            background: linear-gradient(135deg, rgba(108, 99, 255, 0.1) 0%, rgba(255, 255, 255, 1) 100%);
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 8px;
         }
-
-        .hero-content {
-            max-width: 600px;
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
         }
-
-        .hero h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 48px;
-            margin-bottom: 20px;
-            line-height: 1.2;
+        .close:hover {
+            color: black;
         }
-
-        .hero p {
-            font-size: 18px;
-            margin-bottom: 30px;
-            color: #555;
-        }
-
-        .btn {
-            display: inline-block;
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 30px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: var(--transition);
-            border: 2px solid var(--primary-color);
-        }
-
-        .btn:hover {
-            background-color: transparent;
-            color: var(--primary-color);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(108, 99, 255, 0.2);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--primary-color);
-            margin-left: 15px;
-        }
-
-        .btn-outline:hover {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .hero-image {
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 50%;
-            max-width: 600px;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-            100% { transform: translateY(0px); }
-        }
-
-        section {
-            padding: 100px 0;
-        }
-
-        .section-title {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        .section-title h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 36px;
-            position: relative;
-            display: inline-block;
-        }
-
-        .section-title h2::after {
-            content: '';
-            position: absolute;
-            width: 50%;
-            height: 3px;
-            background: var(--primary-color);
-            bottom: -10px;
-            left: 25%;
-        }
-
-        .services {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        .service-card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            transition: var(--transition);
-            text-align: center;
-        }
-
-        .service-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .service-icon {
-            font-size: 40px;
-            color: var(--primary-color);
-            margin-bottom: 20px;
-        }
-
-        .service-card h3 {
-            font-size: 22px;
+        .form-group {
             margin-bottom: 15px;
         }
-
-        footer {
-            background-color: var(--dark-color);
-            color: white;
-            padding: 50px 0 20px;
-            text-align: center;
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
         }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            list-style: none;
-            margin: 20px 0;
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
-
-        .footer-links li {
-            margin: 0 15px;
-        }
-
-        .footer-links a {
-            color: white;
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .footer-links a:hover {
-            color: var(--accent-color);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-        }
-
-        .social-links a {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            margin: 0 10px;
-            color: white;
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .social-links a:hover {
-            background: var(--accent-color);
-            transform: translateY(-5px);
-        }
-
-        @media (max-width: 768px) {
-            .hero {
-                text-align: center;
-                padding-top: 120px;
-            }
-
-            .hero-content {
-                margin: 0 auto;
-            }
-
-            .hero-buttons {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .btn-outline {
-                margin-left: 0;
-                margin-top: 15px;
-            }
-
-            .hero-image {
-                display: none;
-            }
+        .login-error {
+            color: #f44336;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-<header>
-    <div class="container">
-        <nav>
-            <a href="#" class="logo">Portfolio</a>
-            <ul class="nav-links">
-                <li><a href="#">Home</a></li>
-                <li><a href="#services">Services</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-        </nav>
-    </div>
-</header>
+<h1>Web Server Demo</h1>
 
-<section class="hero">
-    <div class="container">
-        <div class="hero-content">
-            <h1>Creating Digital Experiences That Inspire</h1>
-            <p>I'm a passionate designer and developer dedicated to crafting beautiful, functional websites and applications that make an impact.</p>
-            <div class="hero-buttons">
-                <a href="#contact" class="btn">Get Started</a>
-                <a href="#services" class="btn btn-outline">Learn More</a>
-            </div>
-        </div>
-        <img src="https://illustrations.popsy.co/amber/digital-nomad.svg" alt="Creative work illustration" class="hero-image">
+<div class="container">
+    <div class="panel">
+        <h2>Authentication</h2>
+        <button id="loginBtn">Login (admin/password)</button>
+        <div id="authStatus" class="status"></div>
     </div>
-</section>
 
-<section id="services" class="section">
-    <div class="container">
-        <div class="section-title">
-            <h2>My Services</h2>
-        </div>
-        <div class="services">
-            <div class="service-card">
-                <div class="service-icon">🎨</div>
-                <h3>UI/UX Design</h3>
-                <p>Beautiful, intuitive interfaces designed with the user experience at the forefront of every decision.</p>
-            </div>
-            <div class="service-card">
-                <div class="service-icon">💻</div>
-                <h3>Web Development</h3>
-                <p>Custom websites built with modern technologies to ensure fast, secure, and scalable solutions.</p>
-            </div>
-            <div class="service-card">
-                <div class="service-icon">📱</div>
-                <h3>Mobile Apps</h3>
-                <p>Engaging mobile applications designed for both iOS and Android platforms.</p>
-            </div>
-        </div>
+    <div class="panel">
+        <h2>JSON API Demo</h2>
+        <button id="fetchJson" class="secondary" disabled>Fetch JSON Data</button>
+        <div id="jsonResult"></div>
     </div>
-</section>
 
-<footer id="contact">
-    <div class="container">
-        <h3>Let's Work Together</h3>
-        <p>Have a project in mind? I'd love to hear about it.</p>
-        <ul class="footer-links">
-            <li><a href="mailto:hello@example.com">hello@example.com</a></li>
-            <li><a href="tel:+1234567890">+1 (234) 567-890</a></li>
-        </ul>
-        <div class="social-links">
-            <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-linkedin"></i></a>
-            <a href="#"><i class="fab fa-github"></i></a>
-            <a href="#"><i class="fab fa-dribbble"></i></a>
-        </div>
-        <p class="copyright">&copy; 2023 Portfolio. All rights reserved.</p>
+    <div class="panel">
+        <h2>POST JSON Demo</h2>
+        <button id="postJson" class="secondary" disabled>POST JSON Data</button>
+        <div id="postResult"></div>
     </div>
-</footer>
+</div>
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Login</button>
+            <div id="loginError" class="login-error"></div>
+        </form>
+    </div>
+</div>
 
-<!-- Font Awesome for icons (would normally be a CDN link) -->
 <script>
-    // Simple smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            document.querySelector(this.getAttribute('href')).scrollIntoView({
-                behavior: 'smooth'
-            });
-        });
+    let authToken = null;
+    const modal = document.getElementById("loginModal");
+    const span = document.getElementsByClassName("close")[0];
+
+    document.getElementById("loginBtn").addEventListener("click", function() {
+        modal.style.display = "block";
     });
 
-    // Simple animation on scroll
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('animate');
-            }
-        });
-    }, { threshold: 0.1 });
+    span.addEventListener("click", function() {
+        modal.style.display = "none";
+    });
 
-    document.querySelectorAll('.service-card, .section-title').forEach(el => {
-        observer.observe(el);
+    window.addEventListener("click", function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    });
+
+    async function handleRequest(url, method, body = null) {
+        const headers = {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Accept': 'application/json'
+        };
+
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        const options = {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : null
+        };
+
+        try {
+            const response = await fetch(url, options);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.message || `HTTP error ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            }
+            return await response.text();
+        } catch (error) {
+            console.error('Request failed:', error);
+            throw error;
+        }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorElement = document.getElementById('loginError');
+
+        try {
+            const authData = await handleRequest('/api/login', 'POST', {
+                username: username,
+                password: password
+            });
+
+            authToken = authData.token;
+            document.getElementById('authStatus').innerHTML =
+                `<div class="success">Logged in successfully! Token: ${authToken.substring(0, 10)}...</div>`;
+
+            document.getElementById('fetchJson').disabled = false;
+            document.getElementById('postJson').disabled = false;
+
+            modal.style.display = "none";
+            errorElement.textContent = "";
+        } catch (error) {
+            errorElement.textContent = error.message;
+            console.error('Login error:', error);
+        }
+    });
+
+    document.getElementById('fetchJson').addEventListener('click', async () => {
+        const resultElement = document.getElementById('jsonResult');
+        resultElement.innerHTML = '<div class="status">Loading...</div>';
+
+        try {
+            const startTime = performance.now();
+            const response = await fetch('/api/json', {
+                headers: {
+                    'Accept': 'application/json; charset=UTF-8'
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText || 'No details'}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON but got ${contentType}`);
+            }
+
+            const data = await response.json();
+            const duration = (performance.now() - startTime).toFixed(2);
+
+            resultElement.innerHTML = `
+            <h3>Response (${duration}ms):</h3>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+            <div class="status success">Request successful</div>
+        `;
+        } catch (error) {
+            console.error('Fetch error:', error);
+            resultElement.innerHTML = `
+            <div class="status error">
+                <strong>Error:</strong> ${error.message}
+            </div>`;
+        }
+    });
+    document.getElementById('postJson').addEventListener('click', async () => {
+        try {
+            const dataToSend = {
+                name: "Даниил",
+                comment: "Делаю курсач как мужчина"
+            };
+
+            const response = await fetch('/api/echo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dataToSend)
+            });
+
+            const result = await response.text();
+          //  const result = await response.json();
+            document.getElementById('postResult').innerHTML = `
+            <div class="status success">${result}</div>
+        `;
+        } catch (error) {
+            document.getElementById('postResult').innerHTML = `
+            <div class="status error">
+                <strong>Ошибка:</strong> ${error.message}
+            </div>`;
+        }
     });
 </script>
 </body>

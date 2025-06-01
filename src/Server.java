@@ -1,100 +1,153 @@
-import http.HttpHandler;
-import http.HttpHeader;
-import http.HttpRequest;
-import http.HttpResponse;
+import http.httpdiff.HttpHandler;
+import http.httpdiff.HttpHeader;
+import http.httpdiff.HttpRequest;
+import http.httpdiff.HttpResponse;
+import http.sitediff.ContentType;
+import json.JsonXmlExample;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
 
-class Server {
-    private final static int BUFFER_SIZE = 256;
+public class Server {
+    private final static int BUFFER_SIZE = 8192;
+    private final static int MAX_REQUEST_SIZE = 65536;
 
     private final HttpHandler handler;
+    private final String host;
+    private final int port;
 
-    Server(HttpHandler handler) {
+    public Server(HttpHandler handler) {
+        this(handler, config.Config.get("server.host"), config.Config.getInt("server.port"));
+    }
+
+    Server(HttpHandler handler, String host, int port) {
         this.handler = handler;
+        this.host = host;
+        this.port = port;
     }
 
     public void initserver() {
-        try {
-            AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
-            server.bind(new InetSocketAddress("127.0.0.1", 8088));
+        try (AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open()) {
+            server.bind(new InetSocketAddress(host, port));
+            System.out.printf("Server started on %s:%d%n", host, port);
 
             while (true) {
-                Future<AsynchronousSocketChannel> future = server.accept();
-                handleClient(future);
+                try {
+                    Future<AsynchronousSocketChannel> future = server.accept();
+                    handleClient(future);
+                } catch (Exception e) {
+                    System.err.println("Error accepting client connection: " + e.getMessage());
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            e.printStackTrace();
+            System.err.println("Server failed to start: " + e.getMessage());
         }
     }
 
-    private void handleClient(Future<AsynchronousSocketChannel> future)
-            throws InterruptedException, ExecutionException, TimeoutException, IOException {
-        System.out.println("new client connection");
+    private void handleClient(Future<AsynchronousSocketChannel> future) {
+        AsynchronousSocketChannel clientChannel = null;
+        try {
+            clientChannel = future.get();
+            System.out.println("New client connection");
 
-        AsynchronousSocketChannel clientChannel = future.get();
-
-        while (clientChannel != null && clientChannel.isOpen()) {
             ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
             StringBuilder builder = new StringBuilder();
-            boolean keepReading = true;
+            int totalBytesRead = 0;
 
-            while (keepReading) {
-                int readResult = clientChannel.read(buffer).get();
+            while (true) {
+                int bytesRead = clientChannel.read(buffer).get();
+                if (bytesRead == -1) break;
 
-                keepReading = readResult == BUFFER_SIZE;
-                buffer.flip();
-                CharBuffer charBuffer = StandardCharsets.UTF_8.decode(buffer);
-                builder.append(charBuffer);
-
-                buffer.clear();
-            }
-
-            HttpRequest request = new HttpRequest(builder.toString());
-            HttpResponse response = new HttpResponse();
-
-            if (handler != null) {
-                try {
-                    String body = this.handler.handle(request, response);
-
-                    if (body != null && !body.isBlank()) {
-                        response.getHeaders().putIfAbsent(HttpHeader.CONTENT_TYPE, ContentType.TEXT_HTML_UTF8);
-                        response.setBody(body);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-
-                    response.setStatusCode(500);
-                    response.setStatus("Internal server error");
-                    response.addHeader(HttpHeader.CONTENT_TYPE, ContentType.TEXT_HTML_UTF8);
-                    response.setBody("<html><body><h1>Error happens</h1></body></html>");
+                totalBytesRead += bytesRead;
+                if (totalBytesRead > MAX_REQUEST_SIZE) {
+                    sendErrorResponse(clientChannel, 413, "Request too large");
+                    return;
                 }
-            } else {
-                response.setStatusCode(404);
-                response.setStatus("Not found");
-                response.addHeader(HttpHeader.CONTENT_TYPE, ContentType.TEXT_HTML_UTF8);
-                response.setBody("<html><body><h1>Resource not found</h1></body></html>");
+
+                buffer.flip();
+                builder.append(StandardCharsets.UTF_8.decode(buffer));
+                buffer.clear();
+
+                if (builder.toString().contains("\r\n\r\n")) {
+                    break;
+                }
             }
 
-            ByteBuffer resp = ByteBuffer.wrap(response.getBytes());
-            clientChannel.write(resp);
+            String requestData = builder.toString();
+            if (requestData.isEmpty()) {
+                sendErrorResponse(clientChannel, 400, "Empty request");
+                return;
+            }
 
-            clientChannel.close();
+            try {
+                HttpRequest request = new HttpRequest(requestData);
+                HttpResponse response = new HttpResponse();
+
+                if (handler != null) {
+                    handleRequest(request, response);
+                }
+
+                sendResponse(clientChannel, response);
+            } catch (Exception e) {
+                System.err.println("Error processing request: " + e.getMessage());
+                sendErrorResponse(clientChannel, 400, "Bad request");
+            }
+        } catch (Exception e) {
+            System.err.println("Error handling client: " + e.getMessage());
+        } finally {
+            if (clientChannel != null) {
+                try {
+                    clientChannel.close();
+                } catch (IOException e) {
+                    System.err.println("Error closing client channel: " + e.getMessage());
+                }
+            }
         }
+    }
+
+    private void handleRequest(HttpRequest request, HttpResponse response) {
+        try {
+            String body = handler.handle(request, response);
+
+            if (body != null && !body.isBlank()) {
+                if (!response.getHeaders().containsKey(HttpHeader.CONTENT_TYPE)) {
+                    response.addHeader(HttpHeader.CONTENT_TYPE, ContentType.APPLICATION_JSON_UTF8);
+                }
+                response.setBody(body);
+            }
+
+            response.addHeader("Connection", "close");
+            byte[] bodyBytes = response.getBody().getBytes(StandardCharsets.UTF_8);
+            response.addHeader("Content-Length", String.valueOf(bodyBytes.length));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatusCode(500);
+            response.setStatus("Internal server error");
+            response.addHeader(HttpHeader.CONTENT_TYPE, ContentType.APPLICATION_JSON_UTF8);
+            response.setBody(JsonXmlExample.getErrorResponse("Internal server error", 500));
+        }
+    }
+
+    private void sendResponse(AsynchronousSocketChannel channel, HttpResponse response) {
+        try {
+            ByteBuffer resp = ByteBuffer.wrap(response.getBytes());
+            channel.write(resp).get();
+        } catch (Exception e) {
+            System.err.println("Error sending response: " + e.getMessage());
+        }
+    }
+
+    private void sendErrorResponse(AsynchronousSocketChannel channel, int code, String message) {
+        HttpResponse response = new HttpResponse();
+        response.setStatusCode(code);
+        response.setStatus(message);
+        response.addHeader(HttpHeader.CONTENT_TYPE, ContentType.TEXT_PLAIN_UTF8);
+        response.setBody(message);
+        sendResponse(channel, response);
     }
 }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${title}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>${message}</h1>
+
+    {for item in items}
+    <div class="item">${item}</div>
+    {endfor}
+
+    <p>Current time: ${java.time.LocalDateTime.now()}</p>
+</body>
+</html>

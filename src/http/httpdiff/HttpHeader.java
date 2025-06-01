@@ -1,4 +1,4 @@
-package http;
+package http.httpdiff;
 
 public class HttpHeader {
 
