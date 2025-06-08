@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-//привет
 public class Main {
     private static boolean authEnabled;
 
@@ -27,7 +26,6 @@ public class Main {
         } catch (IOException e) {
             System.out.println("Using default configuration");
         }
-
         authEnabled = config.Config.getBoolean("api.authEnabled");
         System.out.println("Authentication is " + (authEnabled ? "ENABLED" : "DISABLED"));
 
@@ -60,7 +58,19 @@ public class Main {
                 return "Ошибка: Неверный формат запроса";
             }
         });
-
+        router.get("/res", (req, res) -> {
+            res.addHeader("Content-Type", "text/html; charset=UTF-8");
+            return "<!DOCTYPE html>\n" +
+                    "<html>\n" +
+                    "<head>\n" +
+                    "    <title>Simple Page</title>\n" +
+                    "</head>\n" +
+                    "<body>\n" +
+                    "    <h1>Hello from /res endpoint!</h1>\n" +
+                    "    <p>This is a simple HTML response from the server.</p>\n" +
+                    "</body>\n" +
+                    "</html>";
+        });
         router.get("/api/json", (req, res) -> {
             res.addHeader("Content-Type", "application/json; charset=UTF-8");
             try {

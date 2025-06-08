@@ -8,7 +8,7 @@ public class HttpRequest {
     private final static String DELIMITER = "\r\n\r\n";
     private final static String NEW_LINE = "\r\n";
     private final static String HEADER_DELIMITER = ":";
-
+    private final Map<String, String> params = new HashMap<>();
     private final String message;
     private final HttpMethod method;
     private final String url;
@@ -67,7 +67,17 @@ public class HttpRequest {
             this.body = bodyContent;
         }
     }
+    public void addParam(String name, String value) {
+        params.put(name, value);
+    }
 
+    public Map<String, String> getParams() {
+        return Collections.unmodifiableMap(params);
+    }
+
+    public String getParam(String name) {
+        return params.get(name);
+    }
     public String getMessage() { return message; }
     public HttpMethod getMethod() { return method; }
     public String getUrl() { return url; }
