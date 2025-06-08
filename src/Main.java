@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-//привет
 public class Main {
     private static boolean authEnabled;
 
