@@ -11,12 +11,6 @@ public class CorsMiddleware implements Middleware {
         response.addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, *");
         response.addHeader("Access-Control-Expose-Headers", "*");
 
-        if (request.getMethod().equals("OPTIONS")) {
-            response.setStatusCode(204);
-            response.setStatus("No Content");
-            return false;
-        }
-
         return true;
     }
 }

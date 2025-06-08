@@ -50,61 +50,61 @@ public class Server {
     }
 
     private void handleClient(Future<AsynchronousSocketChannel> future) {
-        AsynchronousSocketChannel clientChannel = null;
+        AsynchronousSocketChannel clientChannel = null;                  // Канал для работы с клиентом
         try {
-            clientChannel = future.get();
-            System.out.println("New client connection");
+            clientChannel = future.get();                               // Получаем канал клиента из Future
+            System.out.println("New client connection");                // Логируем новое подключение
 
-            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-            StringBuilder builder = new StringBuilder();
-            int totalBytesRead = 0;
+            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);       // Буфер для чтения данных
+            StringBuilder builder = new StringBuilder();                // Накопитель запроса
+            int totalBytesRead = 0;                                     // Счетчик прочитанных байт
 
-            while (true) {
-                int bytesRead = clientChannel.read(buffer).get();
-                if (bytesRead == -1) break;
+            while (true) {                                              // Чтение данных в цикле
+                int bytesRead = clientChannel.read(buffer).get();       // Читаем данные из канала
+                if (bytesRead == -1) break;                             // Проверяем конец потока
 
-                totalBytesRead += bytesRead;
-                if (totalBytesRead > MAX_REQUEST_SIZE) {
-                    sendErrorResponse(clientChannel, 413, "Request too large");
-                    return;
+                totalBytesRead += bytesRead;                             // Обновляем счетчик байт
+                if (totalBytesRead > MAX_REQUEST_SIZE) {                 // Проверка на превышение лимита
+                    sendErrorResponse(clientChannel, 413, "Request too large");  // Отправка ошибки 413
+                    return;                                             // Завершаем обработку
                 }
 
-                buffer.flip();
-                builder.append(StandardCharsets.UTF_8.decode(buffer));
-                buffer.clear();
+                buffer.flip();                                           // Подготавливаем буфер к чтению
+                builder.append(StandardCharsets.UTF_8.decode(buffer));   // Декодируем данные в строку
+                buffer.clear();                                          // Очищаем буфер для новых данных
 
-                if (builder.toString().contains("\r\n\r\n")) {
-                    break;
+                if (builder.toString().contains("\r\n\r\n")) {           // Проверяем конец HTTP-запроса
+                    break;                                              // Выходим из цикла
                 }
             }
 
-            String requestData = builder.toString();
-            if (requestData.isEmpty()) {
-                sendErrorResponse(clientChannel, 400, "Empty request");
-                return;
+            String requestData = builder.toString();                    // Получаем полный запрос
+            if (requestData.isEmpty()) {                                // Проверка на пустой запрос
+                sendErrorResponse(clientChannel, 400, "Empty request");  // Отправка ошибки 400
+                return;                                                 // Завершаем обработку
             }
 
             try {
-                HttpRequest request = new HttpRequest(requestData);
-                HttpResponse response = new HttpResponse();
+                HttpRequest request = new HttpRequest(requestData);     // Парсим HTTP-запрос
+                HttpResponse response = new HttpResponse();              // Создаем HTTP-ответ
 
-                if (handler != null) {
-                    handleRequest(request, response);
+                if (handler != null) {                                  // Если есть обработчик,
+                    handleRequest(request, response);                    // передаем ему запрос и ответ
                 }
 
-                sendResponse(clientChannel, response);
+                sendResponse(clientChannel, response);                   // Отправляем ответ клиенту
             } catch (Exception e) {
-                System.err.println("Error processing request: " + e.getMessage());
-                sendErrorResponse(clientChannel, 400, "Bad request");
+                System.err.println("Error processing request: " + e.getMessage());  // Логируем ошибку
+                sendErrorResponse(clientChannel, 400, "Bad request");    // Отправляем 400 при ошибке
             }
         } catch (Exception e) {
-            System.err.println("Error handling client: " + e.getMessage());
+            System.err.println("Error handling client: " + e.getMessage());  // Логируем ошибку соединения
         } finally {
             if (clientChannel != null) {
                 try {
-                    clientChannel.close();
+                    clientChannel.close();                               // Закрываем канал клиента
                 } catch (IOException e) {
-                    System.err.println("Error closing client channel: " + e.getMessage());
+                    System.err.println("Error closing client channel: " + e.getMessage());  // Логируем ошибку закрытия
                 }
             }
         }

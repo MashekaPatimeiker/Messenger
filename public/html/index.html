@@ -72,7 +72,6 @@
         h1, h2 {
             color: #333;
         }
-
         .modal {
             display: none;
             position: fixed;
@@ -121,6 +120,23 @@
             color: #f44336;
             margin-top: 10px;
         }
+        .token-area {
+            margin-top: 20px;
+        }
+        .token-input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        .token-actions {
+            margin-top: 10px;
+        }
+        .protected-area {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
@@ -129,8 +145,23 @@
 <div class="container">
     <div class="panel">
         <h2>Authentication</h2>
-        <button id="loginBtn">Login (admin/password)</button>
+        <button id="loginBtn">Login (admin/123321)</button>
+        <div class="token-area">
+            <label for="manualToken">Or enter token manually:</label>
+            <input type="text" id="manualToken" class="token-input" placeholder="Paste your JWT token here">
+            <div class="token-actions">
+                <button id="useTokenBtn" class="secondary">Use This Token</button>
+                <button id="copyTokenBtn">Copy Current Token</button>
+                <button id="clearTokenBtn">Clear Token</button>
+            </div>
+        </div>
         <div id="authStatus" class="status"></div>
+
+        <div class="protected-area">
+            <h3>Protected Area Testing</h3>
+            <button id="testProtectedBtn" class="secondary" disabled>Test Protected Area</button>
+            <div id="protectedResult" class="status"></div>
+        </div>
     </div>
 
     <div class="panel">
@@ -145,6 +176,7 @@
         <div id="postResult"></div>
     </div>
 </div>
+
 <div id="loginModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -152,11 +184,11 @@
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username" required value="admin">
             </div>
             <div class="form-group">
                 <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" required value="123321">
             </div>
             <button type="submit">Login</button>
             <div id="loginError" class="login-error"></div>
@@ -183,63 +215,95 @@
         }
     });
 
-    async function handleRequest(url, method, body = null) {
-        const headers = {
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Accept': 'application/json'
-        };
-
-        if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
+    document.getElementById('useTokenBtn').addEventListener('click', function() {
+        const token = document.getElementById('manualToken').value.trim();
+        if (token) {
+            authToken = token;
+            updateAuthStatus(`Using manual token: ${token.substring(0, 10)}...`, true);
+            enableProtectedFeatures();
+        } else {
+            showError('Please enter a valid token');
         }
+    });
 
-        const options = {
-            method,
-            headers,
-            body: body ? JSON.stringify(body) : null
-        };
+    document.getElementById('copyTokenBtn').addEventListener('click', function() {
+        if (authToken) {
+            navigator.clipboard.writeText(authToken)
+                .then(() => alert('Token copied to clipboard!'))
+                .catch(() => alert('Failed to copy token'));
+        } else {
+            showError('No active token to copy');
+        }
+    });
+
+    document.getElementById('clearTokenBtn').addEventListener('click', function() {
+        authToken = null;
+        document.getElementById('manualToken').value = '';
+        updateAuthStatus('Token cleared', false);
+        disableProtectedFeatures();
+    });
+
+    document.getElementById('testProtectedBtn').addEventListener('click', async function() {
+        const resultElement = document.getElementById('protectedResult');
+        resultElement.innerHTML = '<div class="status">Testing protected area...</div>';
 
         try {
-            const response = await fetch(url, options);
+            const response = await fetch('/api/protected', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Accept': 'application/json'
+                }
+            });
 
             if (!response.ok) {
                 const error = await response.json().catch(() => null);
                 throw new Error(error?.message || `HTTP error ${response.status}`);
             }
 
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                return await response.json();
-            }
-            return await response.text();
+            const data = await response.json();
+            resultElement.innerHTML = `
+                <div class="status success">
+                    <strong>Success!</strong> ${data.message}
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
         } catch (error) {
-            console.error('Request failed:', error);
-            throw error;
+            resultElement.innerHTML = `
+                <div class="status error">
+                    <strong>Access Denied:</strong> ${error.message}
+                </div>
+            `;
         }
-    }
+    });
 
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+        const errorElement = document.getElementById('loginError');
+        errorElement.textContent = '';
 
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        const errorElement = document.getElementById('loginError');
 
         try {
-            const authData = await handleRequest('/api/login', 'POST', {
-                username: username,
-                password: password
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
             });
 
-            authToken = authData.token;
-            document.getElementById('authStatus').innerHTML =
-                `<div class="success">Logged in successfully! Token: ${authToken.substring(0, 10)}...</div>`;
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.message || `Login failed with status ${response.status}`);
+            }
 
-            document.getElementById('fetchJson').disabled = false;
-            document.getElementById('postJson').disabled = false;
-
+            const data = await response.json();
+            authToken = data.token;
+            document.getElementById('manualToken').value = authToken;
+            updateAuthStatus(`Logged in successfully! Token: ${authToken.substring(0, 10)}...`, true);
+            enableProtectedFeatures();
             modal.style.display = "none";
-            errorElement.textContent = "";
         } catch (error) {
             errorElement.textContent = error.message;
             console.error('Login error:', error);
@@ -251,44 +315,28 @@
         resultElement.innerHTML = '<div class="status">Loading...</div>';
 
         try {
-            const startTime = performance.now();
-            const response = await fetch('/api/json', {
-                headers: {
-                    'Accept': 'application/json; charset=UTF-8'
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText || 'No details'}`);
-            }
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Expected JSON but got ${contentType}`);
-            }
+            const response = await fetch('/api/json');
+            if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
             const data = await response.json();
-            const duration = (performance.now() - startTime).toFixed(2);
-
             resultElement.innerHTML = `
-            <h3>Response (${duration}ms):</h3>
-            <pre>${JSON.stringify(data, null, 2)}</pre>
-            <div class="status success">Request successful</div>
-        `;
+                <h3>Response:</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+                <div class="status success">Request successful</div>
+            `;
         } catch (error) {
-            console.error('Fetch error:', error);
             resultElement.innerHTML = `
-            <div class="status error">
-                <strong>Error:</strong> ${error.message}
-            </div>`;
+                <div class="status error">
+                    <strong>Error:</strong> ${error.message}
+                </div>`;
         }
     });
+
     document.getElementById('postJson').addEventListener('click', async () => {
         try {
             const dataToSend = {
                 name: "Даниил",
-                comment: "Делаю курсач как мужчина"
+                comment: "Тестирую защищённые зоны"
             };
 
             const response = await fetch('/api/echo', {
@@ -300,17 +348,39 @@
             });
 
             const result = await response.text();
-          //  const result = await response.json();
             document.getElementById('postResult').innerHTML = `
-            <div class="status success">${result}</div>
-        `;
+                <div class="status success">${result}</div>
+            `;
         } catch (error) {
             document.getElementById('postResult').innerHTML = `
-            <div class="status error">
-                <strong>Ошибка:</strong> ${error.message}
-            </div>`;
+                <div class="status error">
+                    <strong>Ошибка:</strong> ${error.message}
+                </div>`;
         }
     });
+
+    function updateAuthStatus(message, isSuccess) {
+        const statusElement = document.getElementById('authStatus');
+        statusElement.innerHTML = `
+            <div class="status ${isSuccess ? 'success' : 'error'}">${message}</div>
+        `;
+    }
+
+    function enableProtectedFeatures() {
+        document.getElementById('fetchJson').disabled = false;
+        document.getElementById('postJson').disabled = false;
+        document.getElementById('testProtectedBtn').disabled = false;
+    }
+
+    function disableProtectedFeatures() {
+        document.getElementById('fetchJson').disabled = true;
+        document.getElementById('postJson').disabled = true;
+        document.getElementById('testProtectedBtn').disabled = true;
+    }
+
+    function showError(message) {
+        alert(message);
+    }
 </script>
 </body>
 </html>
