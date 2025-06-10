@@ -58,18 +58,15 @@ public class Main {
                 return "Ошибка: Неверный формат запроса";
             }
         });
-        router.get("/res", (req, res) -> {
+        router.get("/chat", (req, res) -> {
             res.addHeader("Content-Type", "text/html; charset=UTF-8");
-            return "<!DOCTYPE html>\n" +
-                    "<html>\n" +
-                    "<head>\n" +
-                    "    <title>Simple Page</title>\n" +
-                    "</head>\n" +
-                    "<body>\n" +
-                    "    <h1>Hello from /res endpoint!</h1>\n" +
-                    "    <p>This is a simple HTML response from the server.</p>\n" +
-                    "</body>\n" +
-                    "</html>";
+            try {
+                Path indexPath = staticPath.resolve("chat.html");
+                return Files.readString(indexPath, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                res.setStatusCode(500);
+                return "Error: Unable to read index.html";
+            }
         });
         router.get("/api/json", (req, res) -> {
             res.addHeader("Content-Type", "application/json; charset=UTF-8");
@@ -164,7 +161,18 @@ public class Main {
             System.err.println("Failed to create default files: " + e.getMessage());
         }
     }
-
+    private static void createChatFilesIfNotExist(Path staticPath) {
+        try {
+            if (!Files.exists(staticPath)) {
+                Files.createDirectories(staticPath);
+            }
+            if (!Files.exists(staticPath.resolve("chat.html"))) {
+                Files.writeString(staticPath.resolve("chat.html"), "<!DOCTYPE html><html><head><title>Server</title></head><body><h1>Welcome</h1></body></html>");
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to create default files: " + e.getMessage());
+        }
+    }
     private static String getAuthTokenFromRequest(HttpRequest req) {
         String cookieHeader = req.getHeaders().getOrDefault("Cookie", "");
         return Arrays.stream(cookieHeader.split(";"))
