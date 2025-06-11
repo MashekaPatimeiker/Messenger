@@ -21,7 +21,7 @@ public class StaticFileHandler implements HttpHandler {
     @Override
     public String handle(HttpRequest request, HttpResponse response) throws IOException {
         String requestPath = request.getUrl().split("\\?")[0];
-        String path = requestPath.equals("/") ? "/index.html" : requestPath;
+        String path = requestPath.equals("/") ? "/html/index.html" : requestPath;
 
         Path filePath = basePath.resolve(path.substring(1)).normalize();
 
@@ -36,7 +36,7 @@ public class StaticFileHandler implements HttpHandler {
         }
 
         if (Files.isDirectory(filePath)) {
-            filePath = filePath.resolve("index.html");
+            filePath = filePath.resolve("html/index.html");
             if (!Files.exists(filePath)) {
                 response.setStatusCode(403);
                 return "Directory listing not allowed";
