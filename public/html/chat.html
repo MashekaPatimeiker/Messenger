@@ -86,10 +86,6 @@
             transition: background-color 0.2s;
         }
 
-        .sidebar-button:hover {
-            background-color: #FF096C;
-        }
-
         .chat-header {
             display: flex;
             justify-content: space-between;
@@ -204,9 +200,8 @@
         }
 
         .videochat-sidebar {
-            width: 40px;
+            width: 60px;
             background-color: #1e1e1e;
-            border-left: 1px solid #333;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -231,14 +226,14 @@
             width: 45px;
             height: 45px;
             border-radius: 50%;
-            background-color: #e760d4;
+            background-color: #FF096C;
             color: white;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
             transition: background-color 0.2s;
         }
         .user-message {
@@ -256,10 +251,6 @@
         .message-incoming .user-message {
             text-align: left;
             color: #999;
-        }
-
-        .videochat-button:hover {
-            background-color: #008069;
         }
 
         .videochat-icon {
@@ -323,11 +314,11 @@
                 <div style="font-size: 12px; color: #999;">в сети</div>
             </div>
         </div>
-        <!--<div class="videochat-sidebar">
+        <div class="videochat-sidebar">
             <button class="videochat-button" title="Начать видеочат">
                 <span class="videochat-icon">📹</span>
             </button>
-        </div>-->
+        </div>
     </div>
 
     <div class="chat-messages">
