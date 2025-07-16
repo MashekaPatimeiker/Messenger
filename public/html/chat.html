@@ -4,105 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат с друзьями</title>
-    <link rel="stylesheet" href="/css/chat.css">
+    <link rel = "stylesheet" href="/css/chat.css">
+    <script src = "/js/chat.js"></script>
 </head>
 <body>
-<div class="main-container">
-    <div class="top-bar">
-        <button class="mobile-menu-button" id="menuButton">☰</button>
-        <div class="friend-name" style="margin-left: 15px;">December00</div>
-    </div>
+<div class="buttons-sidebar">
+    <button class="sidebar-button" id="video-chat-button" title="Начать видеочат">
+        <span class="videochat-icon">📹</span>
+    </button>
+    <button class="sidebar-button" title="Добавить друга">
+        <span class="icon">+</span>
+    </button>
+    <div style="flex-grow: 1;"></div>
+    <button class="sidebar-button" title="Настройки">
+        <span class="icon">⚙️</span>
+    </button>
+</div>
 
-    <div class="content-wrapper">
-        <div class="buttons-sidebar">
-            <button class="sidebar-button" title="Начать видеочат">
+<div class="friends-sidebar">
+    <div class="friends-header">
+        <h2>Друзья</h2>
+    </div>
+    <ul class="friends-list">
+        <li class="friend-item">
+            <div class="friend-avatar"></div>
+            <div>
+                <span class="friend-name">December00</span>
+                <div class="friend-last-message">Call me later</div>
+            </div>
+        </li>
+        <li class="friend-item">
+            <div class="friend-avatar"></div>
+            <div>
+                <span class="friend-name">Tanyusha❤</span>
+                <div class="friend-last-message">Wanna play cs2 today?</div>
+            </div>
+        </li>
+        <li class="friend-item">
+            <div class="friend-avatar"></div>
+            <div>
+                <span class="friend-name">Her</span>
+                <div class="friend-last-message">Sit on me pls...</div>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <div class="chat-current-friend">
+            <div class="friend-avatar" style="margin-right: 10px;"></div>
+            <div>
+                <div class="friend-name">December00</div>
+                <div style="font-size: 12px; color: #999;">в сети</div>
+            </div>
+        </div>
+        <div class="videochat-sidebar">
+            <button class="videochat-button" title="Начать видеочат">
                 <span class="videochat-icon">📹</span>
             </button>
-            <button class="sidebar-button" title="Добавить друга">
-                <span class="icon">+</span>
-            </button>
-            <div style="flex-grow: 1;"></div>
-            <button class="sidebar-button" title="Настройки">
-                <span class="icon">⚙️</span>
-            </button>
         </div>
+    </div>
 
-        <div class="friends-sidebar" id="friendsSidebar">
-            <div class="friends-header">
-                <h2>Друзья</h2>
-            </div>
-            <ul class="friends-list">
-                <li class="friend-item">
-                    <div class="friend-avatar"></div>
-                    <div>
-                        <span class="friend-name">December00</span>
-                        <div class="friend-last-message">Call me later</div>
-                    </div>
-                </li>
-                <li class="friend-item">
-                    <div class="friend-avatar"></div>
-                    <div>
-                        <span class="friend-name">Tanyusha❤</span>
-                        <div class="friend-last-message">Wanna play cs2 today?</div>
-                    </div>
-                </li>
-                <li class="friend-item">
-                    <div class="friend-avatar"></div>
-                    <div>
-                        <span class="friend-name">Her</span>
-                        <div class="friend-last-message">Sit on me pls...</div>
-                    </div>
-                </li>
-            </ul>
-        </div>
-
-        <div class="chat-container">
-            <div class="chat-header">
-                <div class="chat-current-friend">
-                    <div class="friend-avatar" style="margin-right: 10px;"></div>
-                    <div>
-                        <div class="friend-name">December00</div>
-                        <div style="font-size: 12px; color: #999;">в сети</div>
-                    </div>
-                </div>
-                <div class="videochat-sidebar">
-                    <button class="videochat-button" title="Начать видеочат">
-                        <span class="videochat-icon">📹</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="chat-messages">
-                <div class="message message-outgoing">
-                    <div class="message-content">Are u ready?</div>
-                    <div class="message-info">
-                        <span class="user-message">You</span>
-                        <span class="message-time">21:42</span>
-                    </div>
-                </div>
-                <div class="message message-incoming">
-                    <div class="message-content">No</div>
-                    <div class="message-info">
-                        <span class="user-message">December00</span>
-                        <span class="message-time">21:42</span>
-                    </div>
-                </div>
-                <div class="message message-incoming">
-                    <div class="message-content">Call me later.</div>
-                    <div class="message-info">
-                        <span class="user-message">December00</span>
-                        <span class="message-time">21:42</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat-input">
-                <textarea placeholder="Написать сообщение..."></textarea>
-                <button class="send-button">
-                    <span class="icon">→</span>
-                </button>
+    <div class="chat-messages" id="chat-messages">
+        <div class="message message-outgoing">
+            <div class="message-content">Are u ready?</div>
+            <div class="message-info">
+                <span class="user-message">You</span>
+                <span class="message-time">21:42</span>
             </div>
         </div>
+        <div class="message message-incoming">
+            <div class="message-content">No</div>
+            <div class="message-info">
+                <span class="user-message">December00</span>
+                <span class="message-time">21:42</span>
+            </div>
+        </div>
+        <div class="message message-incoming">
+            <div class="message-content">Call me later.</div>
+            <div class="message-info">
+                <span class="user-message">December00</span>
+                <span class="message-time">21:42</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-input">
+        <textarea id="message-input" placeholder="Написать сообщение..."></textarea>
+        <button id="input-chat-button" class="send-button" >
+            <span class="icon">→</span>
+        </button>
     </div>
 </div>
 </body>
