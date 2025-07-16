@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class Main {
     private static boolean authEnabled;
-
+    private static final String SECRET_TOKEN = "sample-jwt-token";
     public static void main(String[] args) {
         try {
             config.Config.load("config/server.conf");
@@ -59,14 +59,39 @@ public class Main {
             }
         });
         router.get("/chat", (req, res) -> {
+            String authToken = getAuthTokenFromRequest(req);
+
+            if (authEnabled && !"sample-jwt-token".equals(authToken)) {
+                res.setStatusCode(302);
+                res.addHeader("Location", "/login");
+                return "";
+            }
+
             res.addHeader("Content-Type", "text/html; charset=UTF-8");
             try {
                 Path indexPath = staticPath.resolve("html/chat.html");
                 return Files.readString(indexPath, StandardCharsets.UTF_8);
             } catch (IOException e) {
                 res.setStatusCode(500);
-                return "Error: Unable to read index.html";
+                return "Error: Unable to read chat.html";
             }
+        });
+
+        router.get("/login", (req, res) -> {
+            res.addHeader("Content-Type", "text/html; charset=UTF-8");
+            try {
+                Path loginPath = staticPath.resolve("html/login.html");
+                return Files.readString(loginPath, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                res.setStatusCode(500);
+                return "Error: Unable to read login page";
+            }
+        });
+
+        router.get("/", (req, res) -> {
+            res.setStatusCode(302);
+            res.addHeader("Location", "/login");
+            return "";
         });
         router.get("/api/json", (req, res) -> {
             res.addHeader("Content-Type", "application/json; charset=UTF-8");
@@ -84,36 +109,56 @@ public class Main {
             try {
                 if (!authEnabled) {
                     res.setStatusCode(403);
-                    res.addHeader("Content-Type", "application/json; charset=UTF-8");
+                    res.addHeader("Content-Type", "application/json");
                     return getAuthDisabledResponse();
                 }
 
-                Map<String, Object> requestData = JsonParser.parse(req.getBody());
+                // Логируем тело запроса для отладки
+                String body = req.getBody();
+                System.out.println("Raw login request: " + body);
+
+                Map<String, Object> requestData = JsonParser.parse(body);
+                System.out.println("Parsed login data: " + requestData);
+
                 String username = (String) requestData.get("username");
                 String password = (String) requestData.get("password");
+
+                System.out.println("Auth attempt: " + username + "/" + password);
 
                 Map<String, Object> response = new HashMap<>();
                 if ("admin".equals(username) && "123321".equals(password)) {
                     response.put("status", "success");
-                    response.put("token", "sample-jwt-token");
-                    response.put("user", Map.of(
-                            "id", 1,
-                            "name", "Admin",
-                            "role", "admin"
-                    ));
-                    res.addHeader("Set-Cookie", "auth_token=sample-jwt-token; Path=/; HttpOnly");
+                    response.put("token", SECRET_TOKEN);
+
+                    // Устанавливаем cookie с токеном
+                    String cookie = String.format("auth_token=%s; Path=/; HttpOnly; SameSite=Strict", SECRET_TOKEN);
+                    res.addHeader("Set-Cookie", cookie);
+
+                    System.out.println("Login successful for user: " + username);
                 } else {
                     response.put("status", "error");
                     response.put("message", "Invalid credentials");
                     res.setStatusCode(401);
+                    System.out.println("Login failed for user: " + username);
                 }
-                res.addHeader("Content-Type", "application/json; charset=UTF-8");
+
+                res.addHeader("Content-Type", "application/json");
                 return JsonBuilder.build(response);
             } catch (Exception e) {
-                res.setStatusCode(400);
-                res.addHeader("Content-Type", "application/json; charset=UTF-8");
-                return JsonXmlExample.getErrorResponse("Invalid request", 400);
+                System.err.println("Login error: " + e.getMessage());
+                e.printStackTrace();
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Login processing error", 500);
             }
+        });
+
+        // Добавим endpoint для проверки авторизации
+        router.get("/api/check-auth", (req, res) -> {
+            String token = getAuthTokenFromRequest(req);
+            Map<String, Object> response = new HashMap<>();
+            response.put("authenticated", SECRET_TOKEN.equals(token));
+            res.addHeader("Content-Type", "application/json");
+            return JsonBuilder.build(response);
         });
 
         router.get("/api/protected", (req, res) -> {
