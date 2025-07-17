@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат с друзьями</title>
-    <link rel = "stylesheet" href="/css/chat.css">
-    <script src = "/js/chat.js"></script>
+    <link rel="stylesheet" href="/css/chat.css">
 </head>
 <body>
 <div class="buttons-sidebar">
     <button class="sidebar-button" id="video-chat-button" title="Начать видеочат">
         <span class="videochat-icon">📹</span>
     </button>
-    <button class="sidebar-button" title="Добавить друга">
+    <button class="sidebar-button" id="add-friend-button" title="Добавить друга">
         <span class="icon">+</span>
     </button>
     <div style="flex-grow: 1;"></div>
@@ -25,22 +24,32 @@
     <div class="friends-header">
         <h2>Друзья</h2>
     </div>
-    <ul class="friends-list">
-        <li class="friend-item">
+
+    <!-- Контейнер для добавления друга -->
+    <div class="add-friend-container" id="add-friend-container">
+        <input type="text" class="add-friend-input" id="friend-username" placeholder="Введите ник друга">
+        <div class="add-friend-actions">
+            <button class="add-friend-button cancel-friend-button" id="cancel-add-friend">Отмена</button>
+            <button class="add-friend-button confirm-friend-button" id="confirm-add-friend">Добавить</button>
+        </div>
+    </div>
+
+    <ul class="friends-list" id="friends-list">
+        <li class="friend-item" data-friend="December00">
             <div class="friend-avatar"></div>
             <div>
                 <span class="friend-name">December00</span>
                 <div class="friend-last-message">Call me later</div>
             </div>
         </li>
-        <li class="friend-item">
+        <li class="friend-item" data-friend="Tanyusha❤">
             <div class="friend-avatar"></div>
             <div>
                 <span class="friend-name">Tanyusha❤</span>
                 <div class="friend-last-message">Wanna play cs2 today?</div>
             </div>
         </li>
-        <li class="friend-item">
+        <li class="friend-item" data-friend="Her">
             <div class="friend-avatar"></div>
             <div>
                 <span class="friend-name">Her</span>
@@ -55,7 +64,7 @@
         <div class="chat-current-friend">
             <div class="friend-avatar" style="margin-right: 10px;"></div>
             <div>
-                <div class="friend-name">December00</div>
+                <div class="friend-name" id="current-friend-name">December00</div>
                 <div style="font-size: 12px; color: #999;">в сети</div>
             </div>
         </div>
@@ -92,10 +101,16 @@
 
     <div class="chat-input">
         <textarea id="message-input" placeholder="Написать сообщение..."></textarea>
-        <button id="input-chat-button" class="send-button" >
+        <button id="send-button" class="send-button">
             <span class="icon">→</span>
         </button>
     </div>
 </div>
+
+<!-- Уведомление -->
+<div class="notification" id="notification"></div>
+
+<script src="/js/chat.js">
+</script>
 </body>
 </html>

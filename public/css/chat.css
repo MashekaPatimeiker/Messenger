@@ -257,3 +257,175 @@ body {
     overflow-y: auto;
     scroll-behavior: smooth;
 }
+/* Добавленные стили для динамических элементов */
+.add-friend-container {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    background-color: #252525;
+    border-bottom: 1px solid #333;
+}
+
+.add-friend-container.active {
+    max-height: 120px;
+    padding: 15px 20px;
+}
+
+.add-friend-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.add-friend-input {
+    background-color: #333;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    color: #e0e0e0;
+    outline: none;
+    width: 100%;
+}
+
+.add-friend-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.add-friend-button {
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.cancel-friend-button {
+    background-color: #333;
+    color: #e0e0e0;
+}
+
+.cancel-friend-button:hover {
+    background-color: #444;
+}
+
+.confirm-friend-button {
+    background-color: #FF096C;
+    color: white;
+}
+
+.confirm-friend-button:hover {
+    background-color: #e00860;
+}
+
+/* Стили для уведомлений */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #FF096C;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-30px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Анимация для новых сообщений */
+.message {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: messageAppear 0.3s forwards;
+}
+
+@keyframes messageAppear {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Анимация для новых друзей */
+.friend-item.new-friend {
+    animation: friendAppear 0.4s ease-out;
+}
+
+@keyframes friendAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Плавный скролл в чате */
+.chat-messages {
+    scroll-behavior: smooth;
+    overflow-anchor: auto;
+}
+
+/* Индикатор нового сообщения */
+.unread-indicator {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #FF096C;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.friend-item.has-unread .unread-indicator {
+    opacity: 1;
+}
+
+/* Анимация кнопок */
+.sidebar-button, .videochat-button, .send-button {
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.sidebar-button:active, .videochat-button:active, .send-button:active {
+    transform: scale(0.95);
+}
+
+/* Подсветка активного чата */
+.friend-item.active {
+    background-color: #333;
+    border-left: 3px solid #FF096C;
+}
+
+/* Плавное изменение размера textarea */
+.chat-input textarea {
+    transition: height 0.2s ease-out;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .friends-sidebar {
+        width: 200px;
+    }
+
+    .add-friend-container.active {
+        padding: 10px 15px;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+}
