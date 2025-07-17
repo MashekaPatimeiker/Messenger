@@ -58,32 +58,20 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => null);
-            console.error(`Login failed for ${username}: ${error?.message || response.status}`);
-            throw new Error(error?.message || `Login failed with status ${response.status}`);
-        }
-
         const data = await response.json();
-        authToken = data.token;
-        console.log(`User ${username} logged in successfully. Token: ${authToken.substring(0, 10)}...`);
 
-        document.getElementById('manualToken').value = authToken;
-        updateAuthStatus(`Logged in successfully! Token: ${authToken.substring(0, 10)}...`, true);
-        enableProtectedFeatures();
-        modal.style.display = "none";
-
-        // Логирование перед входом в чат
-        console.log(`User ${username} entering chat...`);
-        // Здесь можно добавить дополнительный запрос к серверу для логирования
+        if (data.status === "success") {
+            // Сохраняем токен и переходим в чат
+            localStorage.setItem('auth_token', data.token);
+            window.location.href = '/chat';
+        } else {
+            throw new Error(data.message || "Login failed");
+        }
     } catch (error) {
-        console.error(`Login error for ${username}:`, error);
         errorElement.textContent = error.message;
     }
 });
