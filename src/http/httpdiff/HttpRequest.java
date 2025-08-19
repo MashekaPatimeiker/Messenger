@@ -1,5 +1,11 @@
 package http.httpdiff;
 
+import java.io.IOException;
+import java.net.Socket;
+import java.net.StandardSocketOptions;
+import java.net.URLDecoder;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,8 +20,12 @@ public class HttpRequest {
     private final String url;
     private final Map<String, String> headers;
     private final String body;
+    private final Map<String, String> queryParams;
+    private final String pathWithoutQuery;
+    private Socket socket;
 
-    public HttpRequest(String message) {
+    public HttpRequest(String message, Socket socket) {
+        this.socket = socket;
         this.message = message;
 
         if (message == null || message.isEmpty()) {
@@ -42,6 +52,10 @@ public class HttpRequest {
 
         this.url = firstLine[1];
 
+        // Парсим query parameters при создании объекта
+        this.queryParams = parseQueryParams(this.url);
+        this.pathWithoutQuery = extractPathWithoutQuery(this.url);
+
         Map<String, String> headersMap = new HashMap<>();
         for (int i = 1; i < headers.length; i++) {
             String[] headerParts = headers[i].split(HEADER_DELIMITER, 2);
@@ -67,6 +81,99 @@ public class HttpRequest {
             this.body = bodyContent;
         }
     }
+
+    public HttpRequest(String message) {
+        this(message, null); // Socket может быть null для некоторых случаев
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
+
+    public void setSocket(Socket socket) {
+        this.socket = socket;
+    }
+
+    // Остальные методы без изменений...
+    private Map<String, String> parseQueryParams(String url) {
+        Map<String, String> params = new HashMap<>();
+
+        int questionMarkIndex = url.indexOf('?');
+        if (questionMarkIndex == -1) {
+            return params;
+        }
+
+        String queryString = url.substring(questionMarkIndex + 1);
+        if (queryString.isEmpty()) {
+            return params;
+        }
+
+        try {
+            String[] pairs = queryString.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=", 2);
+                if (keyValue.length == 2) {
+                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8.name());
+                    String value = URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8.name());
+                    params.put(key, value);
+                } else if (keyValue.length == 1) {
+                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8.name());
+                    params.put(key, "");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing query parameters: " + e.getMessage());
+        }
+
+        return Collections.unmodifiableMap(params);
+    }
+
+    private String extractPathWithoutQuery(String url) {
+        int questionMarkIndex = url.indexOf('?');
+        if (questionMarkIndex == -1) {
+            return url;
+        }
+        return url.substring(0, questionMarkIndex);
+    }
+
+    public String getQueryString() {
+        int questionMarkIndex = url.indexOf('?');
+        if (questionMarkIndex == -1) {
+            return null;
+        }
+        return url.substring(questionMarkIndex + 1);
+    }
+
+    public Map<String, String> getQueryParams() {
+        return queryParams;
+    }
+
+    public String getQueryParam(String paramName) {
+        return queryParams.get(paramName);
+    }
+
+    public String getQueryParam(String paramName, String defaultValue) {
+        return queryParams.getOrDefault(paramName, defaultValue);
+    }
+
+    public boolean hasQueryParam(String paramName) {
+        return queryParams.containsKey(paramName);
+    }
+
+    public String getPathWithoutQuery() {
+        return pathWithoutQuery;
+    }
+    // В классе HttpRequest добавьте метод:
+    public AsynchronousSocketChannel getChannel() throws IOException {
+        if (socket != null && socket.isConnected()) {
+            AsynchronousSocketChannel channel = AsynchronousSocketChannel.open();
+            // Можно также передать настройки сокета
+            channel.setOption(StandardSocketOptions.SO_KEEPALIVE, socket.getKeepAlive());
+            channel.setOption(StandardSocketOptions.TCP_NODELAY, socket.getTcpNoDelay());
+            return channel;
+        }
+        return null;
+    }
     public void addParam(String name, String value) {
         params.put(name, value);
     }
@@ -78,6 +185,7 @@ public class HttpRequest {
     public String getParam(String name) {
         return params.get(name);
     }
+
     public String getMessage() { return message; }
     public HttpMethod getMethod() { return method; }
     public String getUrl() { return url; }

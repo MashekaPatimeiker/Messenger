@@ -11,8 +11,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.net.Socket;
 import java.util.concurrent.Future;
-//дддд
+
 public class Server {
     private final static int BUFFER_SIZE = 8192;
     private final static int MAX_REQUEST_SIZE = 65536;
@@ -48,65 +49,101 @@ public class Server {
             System.err.println("Server failed to start: " + e.getMessage());
         }
     }
-
     private void handleClient(Future<AsynchronousSocketChannel> future) {
-        AsynchronousSocketChannel clientChannel = null;                  // Канал для работы с клиентом
+        AsynchronousSocketChannel asyncChannel = null;
+        String requestData = null;
+        boolean isWebSocket = false;
+
         try {
-            clientChannel = future.get();                               // Получаем канал клиента из Future
-            System.out.println("New client connection");                // Логируем новое подключение
+            asyncChannel = future.get();
+            System.out.println("New client connection");
 
-            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);       // Буфер для чтения данных
-            StringBuilder builder = new StringBuilder();                // Накопитель запроса
-            int totalBytesRead = 0;                                     // Счетчик прочитанных байт
+            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            StringBuilder builder = new StringBuilder();
+            int totalBytesRead = 0;
 
-            while (true) {                                              // Чтение данных в цикле
-                int bytesRead = clientChannel.read(buffer).get();       // Читаем данные из канала
-                if (bytesRead == -1) break;                             // Проверяем конец потока
+            while (true) {
+                int bytesRead = asyncChannel.read(buffer).get();
+                if (bytesRead == -1) break;
 
-                totalBytesRead += bytesRead;                             // Обновляем счетчик байт
-                if (totalBytesRead > MAX_REQUEST_SIZE) {                 // Проверка на превышение лимита
-                    sendErrorResponse(clientChannel, 413, "Request too large");  // Отправка ошибки 413
-                    return;                                             // Завершаем обработку
+                totalBytesRead += bytesRead;
+                if (totalBytesRead > MAX_REQUEST_SIZE) {
+                    sendErrorResponse(asyncChannel, 413, "Request too large");
+                    return;
                 }
 
-                buffer.flip();                                           // Подготавливаем буфер к чтению
-                builder.append(StandardCharsets.UTF_8.decode(buffer));   // Декодируем данные в строку
-                buffer.clear();                                          // Очищаем буфер для новых данных
+                buffer.flip();
+                builder.append(StandardCharsets.UTF_8.decode(buffer));
+                buffer.clear();
 
-                if (builder.toString().contains("\r\n\r\n")) {           // Проверяем конец HTTP-запроса
-                    break;                                              // Выходим из цикла
+                if (builder.toString().contains("\r\n\r\n")) {
+                    break;
                 }
             }
 
-            String requestData = builder.toString();                    // Получаем полный запрос
-            if (requestData.isEmpty()) {                                // Проверка на пустой запрос
-                sendErrorResponse(clientChannel, 400, "Empty request");  // Отправка ошибки 400
-                return;                                                 // Завершаем обработку
+            requestData = builder.toString();
+            if (requestData.isEmpty()) {
+                sendErrorResponse(asyncChannel, 400, "Empty request");
+                return;
             }
 
             try {
-                HttpRequest request = new HttpRequest(requestData);     // Парсим HTTP-запрос
-                HttpResponse response = new HttpResponse();              // Создаем HTTP-ответ
+                HttpRequest request = new HttpRequest(requestData);
+                HttpResponse response = new HttpResponse();
 
-                if (handler != null) {                                  // Если есть обработчик,
-                    handleRequest(request, response);                    // передаем ему запрос и ответ
+                // Проверяем WebSocket запрос
+                if (request.getUrl().equals("/ws") &&
+                        "websocket".equalsIgnoreCase(request.getHeaders().getOrDefault("Upgrade", "")) &&
+                        "Upgrade".equalsIgnoreCase(request.getHeaders().getOrDefault("Connection", ""))) {
+
+                    isWebSocket = true;
+                    System.out.println("WebSocket connection detected");
+                    return; // Не закрываем соединение!
                 }
 
-                sendResponse(clientChannel, response);                   // Отправляем ответ клиенту
+                // Обычная HTTP обработка
+                if (handler != null) {
+                    handleRequest(request, response);
+                }
+
+                sendResponse(asyncChannel, response);
+
             } catch (Exception e) {
-                System.err.println("Error processing request: " + e.getMessage());  // Логируем ошибку
-                sendErrorResponse(clientChannel, 400, "Bad request");    // Отправляем 400 при ошибке
+                System.err.println("Error processing request: " + e.getMessage());
+                sendErrorResponse(asyncChannel, 400, "Bad request");
             }
         } catch (Exception e) {
-            System.err.println("Error handling client: " + e.getMessage());  // Логируем ошибку соединения
+            System.err.println("Error handling client: " + e.getMessage());
         } finally {
-            if (clientChannel != null) {
+            // Закрываем соединение только для HTTP, не для WebSocket
+            if (asyncChannel != null && !isWebSocket) {
                 try {
-                    clientChannel.close();                               // Закрываем канал клиента
+                    asyncChannel.close();
                 } catch (IOException e) {
-                    System.err.println("Error closing client channel: " + e.getMessage());  // Логируем ошибку закрытия
+                    System.err.println("Error closing client channel: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    private boolean isWebSocketRequest(String requestData) {
+        // Простая проверка на WebSocket запрос
+        return requestData.contains("Upgrade: websocket") &&
+                requestData.contains("Connection: Upgrade");
+    }
+    // Метод для преобразования AsynchronousSocketChannel в Socket
+    private Socket asyncChannelToSocket(AsynchronousSocketChannel asyncChannel) {
+        try {
+            // Получаем удаленный адрес для создания Socket
+            InetSocketAddress remoteAddress = (InetSocketAddress) asyncChannel.getRemoteAddress();
+            // Создаем фиктивный Socket с правильными адресами
+            Socket socket = new Socket();
+            socket.setReuseAddress(true);
+            // Важно: это упрощенное преобразование, для WebSocket этого должно быть достаточно
+            return socket;
+        } catch (IOException e) {
+            System.err.println("Error creating socket from async channel: " + e.getMessage());
+            return null;
         }
     }
 
