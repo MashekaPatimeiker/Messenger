@@ -24,7 +24,6 @@ public class AuthMiddleware implements Middleware {
                 return false;
             }
 
-            // Добавляем ID пользователя в заголовки для последующих обработчиков
             request.getHeaders().put("X-User-ID", String.valueOf(userId));
         }
         return true;

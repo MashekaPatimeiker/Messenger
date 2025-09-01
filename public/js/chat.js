@@ -1,4 +1,3 @@
-// Хранилище данных
 let chatsData = [];
 let currentChatId = null;
 let currentUser = null;
@@ -9,18 +8,15 @@ let isWebSocketConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
-// DOM элементы
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 const currentFriendName = document.getElementById('current-friend-name');
 const friendsList = document.getElementById('friends-list');
 
-// Инициализация
 document.addEventListener('DOMContentLoaded', async function() {
     await init();
 });
-// После успешного логина через API
 fetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +56,6 @@ function connectWebSocket() {
             return;
         }
 
-        // Пробуем получить токен
         let token = getCookie('auth_token') || localStorage.getItem('auth_token');
         console.log('Token found:', token ? 'YES' : 'NO');
 
@@ -69,7 +64,6 @@ function connectWebSocket() {
             return;
         }
 
-        // ФИКС: Декодируем токен если он в base64
         try {
             if (token.startsWith('dG9rZW4') || token.includes('_')) {
                 // Это base64 токен, декодируем
@@ -85,7 +79,6 @@ function connectWebSocket() {
         console.log('Using token:', token);
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // ФИКС: Правильный порт WebSocket (8081)
         const wsUrl = `${protocol}//192.168.100.5:8081/ws?token=${encodeURIComponent(token)}`;
 
         console.log('Connecting to WebSocket:', wsUrl);
@@ -142,7 +135,6 @@ async function apiRequest(endpoint, options = {}) {
         const baseURL = window.location.origin;
         const url = `${baseURL}${endpoint}`;
 
-        // ФИКС: Добавляем токен в заголовки
         const token = getCookie('auth_token') || localStorage.getItem('auth_token');
         const headers = {
             'Content-Type': 'application/json',
@@ -238,7 +230,6 @@ function handleWebSocketMessage(message) {
             return;
         }
 
-        // ФИКС: Правильная обработка новых сообщений
         if (data.type === 'new_message') {
             handleNewMessage(data);
             return;
@@ -255,14 +246,12 @@ function handleWebSocketMessage(message) {
             return;
         }
 
-        // ФИКС: Обработка списка сообщений
         if (data.type === 'messages') {
             console.log('Messages list received:', data.messages);
             renderMessages(data.messages || []);
             return;
         }
 
-        // ФИКС: Обработка списка чатов
         if (data.type === 'chats') {
             console.log('Chats list received:', data.chats);
             chatsData = data.chats || [];
@@ -281,14 +270,12 @@ function handleNewMessage(data) {
     if (data.type === 'new_message' && data.chat_id) {
         console.log('Processing new message for chat:', data.chat_id, data);
 
-        // ФИКС: Проверяем, не было ли уже добавлено это сообщение
         const existingMessage = document.querySelector(`[data-message-id="${data.message_id}"]`);
         if (existingMessage) {
             console.log('Message already exists in UI, skipping:', data.message_id);
             return;
         }
 
-        // Если это сообщение для текущего чата, добавляем его
         if (data.chat_id == currentChatId) {
             addMessageToChat({
                 message_id: data.message_id,
@@ -305,12 +292,10 @@ function handleNewMessage(data) {
             }, 100);
         }
 
-        // Обновляем список чатов
         loadChatsHTTP();
     }
 }
 
-// ФИКС: Основные функции работы с чатами
 async function loadChatsHTTP() {
     try {
         chatsData = await loadChatsAPI();
@@ -343,7 +328,6 @@ async function joinChat(chatId) {
     console.log('Joining chat:', chatId);
 
     try {
-        // Отправляем запрос на присоединение к чату через JSON
         const joinData = {
             type: 'join_chat',
             chat_id: parseInt(chatId)
@@ -356,7 +340,7 @@ async function joinChat(chatId) {
         console.error('Error joining chat:', error);
     }
 }
-// Обновите функцию selectChat
+
 async function selectChat(chatId) {
     currentChatId = chatId;
     const chat = chatsData.find(c => c.chat_id == chatId);
@@ -364,10 +348,8 @@ async function selectChat(chatId) {
         currentFriendName.textContent = chat.chat_name;
     }
 
-    // Присоединяемся к чату при выборе
     await joinChat(chatId);
 
-    // Обновляем UI
     if (friendsList) {
         const chatItems = friendsList.querySelectorAll('.friend-item');
         chatItems.forEach(item => {
@@ -382,7 +364,6 @@ async function selectChat(chatId) {
 
     await loadMessagesHTTP(chatId);
 }
-// Функция для ручной установки cookie (fallback)
 function setCookie(name, value, days = 7) {
     try {
         const encodedValue = encodeURIComponent(value);
@@ -403,7 +384,6 @@ async function loadUserData() {
     try {
         console.log('Loading user data...');
 
-        // 1. Пробуем получить токен
         let token = getCookie('auth_token') || localStorage.getItem('auth_token');
         console.log('Token available:', !!token);
 
@@ -414,7 +394,6 @@ async function loadUserData() {
             return;
         }
 
-        // 2. Пробуем получить информацию о пользователе
         try {
             const data = await apiRequest('/api/user-info');
             if (data && data.user) {
@@ -473,10 +452,8 @@ async function sendMessage() {
     console.log('Sending message:', messageText, 'to chat:', currentChatId);
 
     try {
-        // Убедимся, что мы присоединены к чату
         await joinChat(currentChatId);
 
-        // Ждем немного перед отправкой сообщения
         await new Promise(resolve => setTimeout(resolve, 100));
 
         if (isWebSocketConnected && websocket && websocket.readyState === WebSocket.OPEN) {
@@ -514,7 +491,6 @@ async function sendMessageAPI(chatId, text) {
     }
 }
 
-// ФИКС: Упрощенные тестовые данные
 function getTestChats() {
     return [
         {
@@ -539,24 +515,20 @@ function getTestMessages() {
     ];
 }
 
-// ФИКС: Упрощенная инициализация
 async function init() {
     try {
         console.log('Initializing chat application...');
         await loadUserData();
         setupEventListeners();
 
-        // Пробуем подключиться к WebSocket, но не блокируем инициализацию
         setTimeout(connectWebSocket, 1000);
 
-        // Загружаем чаты через HTTP
         await loadChatsHTTP();
 
         console.log('Chat application initialized successfully');
 
     } catch (error) {
         console.error('Initialization error:', error);
-        // Показываем уведомление, но не перенаправляем
         showNotification('Приложение загружено в ограниченном режиме');
     }
 }
@@ -576,7 +548,6 @@ function setupEventListeners() {
     }
 }
 
-// Вспомогательные функции
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -586,7 +557,6 @@ function escapeHtml(text) {
 
 function showNotification(text) {
     console.log('Notification:', text);
-    // Можно добавить красивый toast уведомление
     alert(text);
 }
 
@@ -630,7 +600,6 @@ function addMessageToChat(message) {
     const messageElement = document.createElement('div');
     messageElement.className = `message ${message.is_own ? 'message-outgoing' : 'message-incoming'}`;
 
-    // ФИКС: Добавляем ID сообщения для проверки дубликатов
     if (message.message_id) {
         messageElement.setAttribute('data-message-id', message.message_id);
     }
@@ -651,7 +620,6 @@ function addMessageToChat(message) {
 
     chatMessages.appendChild(messageElement);
 
-    // Прокручиваем к новому сообщению
     setTimeout(() => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }, 50);
@@ -662,7 +630,6 @@ function formatTime(dateString) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// Запуск приложения
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

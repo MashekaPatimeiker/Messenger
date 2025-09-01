@@ -88,9 +88,7 @@ public class WebSocketServer {
                     buffer.flip();
                     String request = StandardCharsets.UTF_8.decode(buffer).toString();
 
-                    // Проверяем WebSocket handshake
                     if (isWebSocketHandshake(request)) {
-                        // Проверяем origin
                         if (!isOriginAllowed(request)) {
                             sendForbiddenResponse(client);
                             cleanupClient(client);
@@ -118,7 +116,6 @@ public class WebSocketServer {
                             cleanupClient(client);
                         }
                     } else {
-                        // Не WebSocket запрос
                         cleanupClient(client);
                     }
                 }
@@ -141,7 +138,6 @@ public class WebSocketServer {
             String[] lines = request.split("\r\n");
             String firstLine = lines[0];
 
-            // 1. Проверяем query string (приоритет)
             if (firstLine.contains("?")) {
                 String queryString = firstLine.split("\\?")[1].split(" ")[0];
                 System.out.println("Query string: " + queryString);
@@ -156,7 +152,6 @@ public class WebSocketServer {
                 }
             }
 
-            // 2. Проверяем cookies (второй приоритет)
             for (String line : lines) {
                 if (line.startsWith("Cookie:")) {
                     String cookieHeader = line.substring("Cookie:".length()).trim();
@@ -174,7 +169,6 @@ public class WebSocketServer {
                 }
             }
 
-            // 3. Проверяем Authorization header (третий приоритет)
             for (String line : lines) {
                 if (line.startsWith("Authorization:")) {
                     String authHeader = line.substring("Authorization:".length()).trim();

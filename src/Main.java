@@ -29,19 +29,7 @@ public class Main {
     public static void main(String[] args) {
         initializeConfiguration();
         initializeDatabaseConnection();
-
-        // Запускаем WebSocket сервер
         startWebSocketServer();
-        System.out.println("WebSocket server status: " +
-                (webSocketServer != null ? "RUNNING" : "NOT RUNNING"));
-
-        if (webSocketServer != null) {
-            System.out.println("WebSocket server should be listening on:");
-            System.out.println("ws://localhost:8081/ws");
-            System.out.println("ws://127.0.0.1:8081/ws");
-            System.out.println("ws://192.168.100.13:8081/ws");
-        }
-
         startTokenCleanupTask();
         Router router = setupRouter();
         setupLogoutRoute(router);
@@ -55,17 +43,14 @@ public class Main {
         return webSocketServer;
     }
     private static void startTokenCleanupTask() {
-        // Очищаем просроченные токены каждые 5 минут
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
                 SimpleTokenUtils.cleanupExpiredTokens();
-                System.out.println("Cleaned up expired tokens");
             }
         }, 300000, 300000); // 5 минут
     }
 
-    // Добавьте этот метод
     private static void setupUserInfoRoute(Router router) {
         router.get("/api/user-info", (req, res) -> {
             try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
@@ -77,7 +62,6 @@ public class Main {
                     return JsonXmlExample.getErrorResponse("Unauthorized", 401);
                 }
 
-                // Получаем информацию о пользователе
                 String sql = "SELECT user_id, user_name FROM users WHERE user_id = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, userId);
@@ -103,7 +87,7 @@ public class Main {
         });
     }
     private static void startWebSocketServer() {
-        int webSocketPort = 8081; // Явно указываем порт
+        int webSocketPort = 8081;
         WebSocketMessageProcessor processor = new WebSocketMessageProcessor(webSocketServer);
         webSocketServer = new WebSocketServer(webSocketPort);
 
@@ -165,11 +149,10 @@ public class Main {
         setupStaticPageRoutes(router);
         setupJsonApiRoute(router);
         setupProtectedRoute(router);
-        setupChatRoutes(router);
         setupGetMessagesRoute(router);
         setupGetChatsRoute(router);
         setupSendMessageRoute(router);
-        setupRefreshTokenRoute(router);      // Add this
+        setupRefreshTokenRoute(router);
         setupUserInfoRoute(router);
         setupValidateTokenRoute(router);
     }
@@ -184,7 +167,6 @@ public class Main {
                     return JsonXmlExample.getErrorResponse("Token required", 400);
                 }
 
-                // Валидируем токен
                 SimpleTokenUtils.TokenData tokenData = SimpleTokenUtils.validateToken(token);
 
                 if (tokenData != null) {
@@ -207,9 +189,6 @@ public class Main {
                 return JsonXmlExample.getErrorResponse("Server error", 500);
             }
         });
-    }
-    private static void setupChatRoutes(Router router) {
-        // Этот метод теперь пустой, так как все маршруты вынесены в отдельные методы
     }
 
     private static void setupGetMessagesRoute(Router router) {
@@ -446,7 +425,6 @@ public class Main {
 
                     String newToken = SimpleTokenUtils.generateToken(userId, username);
 
-                    // Используем те же настройки cookie
                     String cookieSettings = "auth_token=" + newToken +
                             "; Path=/" +
                             "; HttpOnly" +
@@ -495,9 +473,8 @@ public class Main {
                             if (password.equals(storedPassword)) {
                                 String token = SimpleTokenUtils.generateToken(userId, username);
 
-                                // Динамически определяем настройки cookie
                                 String host = req.getHeader("Host");
-// НА ЭТО:
+
                                 boolean isLocalhost = host.contains("localhost") || host.contains("127.0.0.1") || host.contains("192.168.");
                                 String cookieSettings = "auth_token=" + token +
                                         "; Path=/" +
@@ -569,7 +546,6 @@ public class Main {
     }
 
     private static String handleChatPageRequest(HttpRequest req, HttpResponse res) {
-        // Добавьте проверку токена
         String token = getAuthTokenFromRequest(req);
         System.out.println("[DEBUG CHAT] Token in chat request: " + (token.isEmpty() ? "EMPTY" : "PRESENT"));
 
@@ -628,7 +604,6 @@ public class Main {
                     return JsonXmlExample.getErrorResponse("Invalid parameters", 400);
                 }
 
-                // Проверяем доступ к чату
                 String checkSql = "SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?";
                 try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                     checkStmt.setInt(1, chatId);
@@ -639,7 +614,6 @@ public class Main {
                     }
                 }
 
-                // Сохраняем сообщение
                 String insertSql = "INSERT INTO messages (chat_id, sender_id, message_text) VALUES (?, ?, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
                     insertStmt.setInt(1, chatId);
@@ -647,7 +621,6 @@ public class Main {
                     insertStmt.setString(3, messageText);
                     insertStmt.executeUpdate();
 
-                    // Получаем ID вставленного сообщения
                     ResultSet rs = insertStmt.getGeneratedKeys();
                     if (rs.next()) {
                         int messageId = rs.getInt(1);
@@ -706,7 +679,6 @@ public class Main {
         return JsonBuilder.build(response);
     }
 
-    // Добавляем метод generateWebSocketAccept в Main
     static String generateWebSocketAccept(String key) {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
@@ -743,7 +715,7 @@ public class Main {
         System.out.println("[DEBUG] Extracted token: " + (token.isEmpty() ? "EMPTY" : "FOUND (" + token.length() + " chars)"));
         return token;
     }
-    // Метод для извлечения query параметров из запроса
+
     private static Map<String, String> getQueryParams(HttpRequest req) {
         Map<String, String> queryParams = new HashMap<>();
 
@@ -775,7 +747,6 @@ public class Main {
         router.post("/api/logout", (req, res) -> {
             String token = getAuthTokenFromRequest(req);
 
-            // Используем те же настройки cookie для удаления
             String cookieSettings = "auth_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT" +
                     "; HttpOnly" +
                     "; SameSite=Lax";

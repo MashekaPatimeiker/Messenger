@@ -124,7 +124,6 @@ public class JsonParser {
             }
         }
 
-        // Add last element
         if (start < content.length()) {
             result.add(parseValue(content.substring(start).trim()));
         }

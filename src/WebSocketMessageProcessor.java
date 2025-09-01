@@ -252,7 +252,6 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
             wsClient.setUserId(String.valueOf(tokenData.getUserId()));
             wsClient.setUsername(tokenData.getUsername());
 
-            // Отправляем ответ в обоих форматах для совместимости
             return "AUTH_SUCCESS:" + tokenData.getUserId() + ":" + tokenData.getUsername();
         }
 
@@ -269,7 +268,6 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             int userId = Integer.parseInt(wsClient.getUserId());
 
-            // Проверяем доступ к чату
             String checkSql = "SELECT 1 FROM chat_members cm " +
                     "JOIN chats c ON cm.chat_id = c.chat_id " +
                     "WHERE cm.chat_id = ? AND cm.user_id = ?";
@@ -284,7 +282,6 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
             wsClient.setCurrentChatId(chatId);
             clientChats.put(client, chatId);
 
-            // Получаем информацию о чате
             String chatInfoSql = "SELECT chat_name, chat_type FROM chats WHERE chat_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(chatInfoSql)) {
                 stmt.setInt(1, Integer.parseInt(chatId));
@@ -318,7 +315,6 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
         int userId = Integer.parseInt(wsClient.getUserId());
 
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            // Сохраняем сообщение в базу данных
             String insertSql = "INSERT INTO messages (chat_id, sender_id, message_text) VALUES (?, ?, ?)";
             try (PreparedStatement insertStmt = conn.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 insertStmt.setInt(1, Integer.parseInt(chatId));
@@ -331,14 +327,11 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
                     int messageId = rs.getInt(1);
                     Timestamp sentAt = getMessageTimestamp(conn, messageId);
 
-                    // Получаем информацию об отправителе
                     String senderName = getUsernameById(conn, userId);
 
-                    // Формируем полное сообщение для рассылки
                     String broadcastMessage = String.format("NEW_MESSAGE:%d:%s:%s:%d:%s",
                             userId, senderName, text, messageId, sentAt.toString());
 
-                    // Рассылаем всем участникам чата
                     webSocketServer.broadcastToChat(chatId, broadcastMessage);
 
                     return "MESSAGE_SENT:" + messageId;
@@ -456,7 +449,6 @@ public class WebSocketMessageProcessor implements WebSocketServer.MessageProcess
                 }
             }
 
-            // Обновляем время последнего прочтения
             updateReadReceipts(conn, userId, Integer.parseInt(chatId));
 
             return response.toString();

@@ -225,9 +225,6 @@ public class HttpRequest {
         return pathWithoutQuery;
     }
 
-    /**
-     * Получает базовый путь (первую часть пути)
-     */
     public String getBasePath() {
         if (pathWithoutQuery == null || pathWithoutQuery.isEmpty()) {
             return "/";
@@ -240,9 +237,6 @@ public class HttpRequest {
         return pathWithoutQuery;
     }
 
-    /**
-     * Получает IP адрес клиента (если доступен)
-     */
     public String getClientIp() {
         if (socket != null && socket.getInetAddress() != null) {
             return socket.getInetAddress().getHostAddress();
@@ -262,55 +256,34 @@ public class HttpRequest {
         return "unknown";
     }
 
-    /**
-     * Получает User-Agent клиента
-     */
     public String getUserAgent() {
         return getHeader("User-Agent");
     }
 
-    /**
-     * Проверяет, является ли запрос AJAX запросом
-     */
     public boolean isAjax() {
         String xRequestedWith = getHeader("X-Requested-With");
         return "XMLHttpRequest".equalsIgnoreCase(xRequestedWith);
     }
 
-    /**
-     * Получает Content-Type запроса
-     */
     public String getContentType() {
         return getHeader("Content-Type");
     }
 
-    /**
-     * Проверяет, является ли Content-Type JSON
-     */
     public boolean isJsonContent() {
         String contentType = getContentType();
         return contentType != null && contentType.toLowerCase().contains("application/json");
     }
 
-    /**
-     * Проверяет, является ли Content-Type form-urlencoded
-     */
     public boolean isFormUrlEncoded() {
         String contentType = getContentType();
         return contentType != null && contentType.toLowerCase().contains("application/x-www-form-urlencoded");
     }
 
-    /**
-     * Проверяет, является ли Content-Type multipart/form-data
-     */
     public boolean isMultipart() {
         String contentType = getContentType();
         return contentType != null && contentType.toLowerCase().contains("multipart/form-data");
     }
 
-    /**
-     * Получает значение cookie по имени
-     */
     public String getCookie(String cookieName) {
         String cookieHeader = getHeader("Cookie");
         if (cookieHeader != null) {
@@ -325,168 +298,18 @@ public class HttpRequest {
         return null;
     }
 
-    /**
-     * Получает все cookies
-     */
-    public Map<String, String> getCookies() {
-        Map<String, String> cookies = new HashMap<>();
-        String cookieHeader = getHeader("Cookie");
-        if (cookieHeader != null) {
-            String[] cookiePairs = cookieHeader.split(";");
-            for (String cookie : cookiePairs) {
-                String[] parts = cookie.trim().split("=", 2);
-                if (parts.length == 2) {
-                    cookies.put(parts[0].trim(), parts[1].trim());
-                }
-            }
-        }
-        return cookies;
-    }
-
-    /**
-     * Проверяет, является ли запрос GET
-     */
     public boolean isGet() {
         return method == HttpMethod.GET;
     }
 
-    /**
-     * Проверяет, является ли запрос POST
-     */
     public boolean isPost() {
         return method == HttpMethod.POST;
     }
 
-    /**
-     * Проверяет, является ли запрос PUT
-     */
     public boolean isPut() {
         return method == HttpMethod.PUT;
     }
 
-    /**
-     * Проверяет, является ли запрос DELETE
-     */
-    public boolean isDelete() {
-        return method == HttpMethod.DELETE;
-    }
-
-    /**
-     * Проверяет, является ли запрос OPTIONS
-     */
-    public boolean isOptions() {
-        return method == HttpMethod.OPTIONS;
-    }
-
-    /**
-     * Проверяет, является ли запрос HEAD
-     */
-    public boolean isHead() {
-        return method == HttpMethod.HEAD;
-    }
-
-    /**
-     * Получает длину тела запроса
-     */
-    public int getContentLength() {
-        String contentLength = getHeader("Content-Length");
-        if (contentLength != null) {
-            try {
-                return Integer.parseInt(contentLength);
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * Получает значение параметра из тела (для form-urlencoded)
-     */
-    public String getFormParam(String paramName) {
-        if (isFormUrlEncoded() && body != null) {
-            try {
-                String[] pairs = body.split("&");
-                for (String pair : pairs) {
-                    String[] keyValue = pair.split("=", 2);
-                    if (keyValue.length == 2 && keyValue[0].equals(paramName)) {
-                        return URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8.name());
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Error parsing form parameters: " + e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Получает все параметры из тела (для form-urlencoded)
-     */
-    public Map<String, String> getFormParams() {
-        Map<String, String> formParams = new HashMap<>();
-        if (isFormUrlEncoded() && body != null) {
-            try {
-                String[] pairs = body.split("&");
-                for (String pair : pairs) {
-                    String[] keyValue = pair.split("=", 2);
-                    if (keyValue.length == 2) {
-                        String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8.name());
-                        String value = URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8.name());
-                        formParams.put(key, value);
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Error parsing form parameters: " + e.getMessage());
-            }
-        }
-        return formParams;
-    }
-
-    /**
-     * Получает значение параметра (сначала из query, потом из form, потом из добавленных params)
-     */
-    public String getAnyParam(String paramName) {
-        // Пробуем получить из query параметров
-        String value = getQueryParam(paramName);
-        if (value != null) {
-            return value;
-        }
-
-        // Пробуем получить из form параметров
-        value = getFormParam(paramName);
-        if (value != null) {
-            return value;
-        }
-
-        // Пробуем получить из добавленных параметров
-        return getParam(paramName);
-    }
-
-    /**
-     * Получает значение параметра с default значением
-     */
-    public String getAnyParam(String paramName, String defaultValue) {
-        String value = getAnyParam(paramName);
-        return value != null ? value : defaultValue;
-    }
-
-    /**
-     * Проверяет, является ли запрос к API (начинается с /api/)
-     */
-    public boolean isApiRequest() {
-        return pathWithoutQuery != null && pathWithoutQuery.startsWith("/api/");
-    }
-
-    /**
-     * Проверяет, является ли запрос к статическому файлу
-     */
-    public boolean isStaticFileRequest() {
-        if (pathWithoutQuery == null) {
-            return false;
-        }
-        return pathWithoutQuery.matches(".*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$");
-    }
 
     @Override
     public String toString() {

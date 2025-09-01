@@ -54,13 +54,6 @@ public class JsonXmlExample {
     }
     public static Map<String, Object> parseJson(String json) {
         try {
-            // Простая реализация парсинга JSON (заглушка)
-            // В реальном проекте здесь нужно использовать JSON парсер
-            // Например, Jackson, Gson или другой библиотеки
-
-            // Эта реализация предполагает, что у вас есть JsonParser класс
-            // Если его нет, вам нужно добавить зависимость или реализовать парсер
-
             return JsonParser.parse(json);
         } catch (Exception e) {
             e.printStackTrace();

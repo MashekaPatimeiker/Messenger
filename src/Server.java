@@ -3,7 +3,6 @@ import http.httpdiff.HttpHeader;
 import http.httpdiff.HttpRequest;
 import http.httpdiff.HttpResponse;
 import http.sitediff.ContentType;
-import json.JsonBuilder;
 import json.JsonXmlExample;
 import security.SimpleTokenUtils;
 
@@ -13,13 +12,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.net.Socket;
-import java.net.HttpCookie;
 import java.util.concurrent.Future;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
 import java.sql.*;
 
 public class Server {
@@ -30,7 +25,6 @@ public class Server {
     private final String host;
     private final int port;
 
-    // Данные БД
     private static final String DB_URL = "jdbc:postgresql://localhost:5432/postgres";
     private static final String DB_USER = "postgres";
     private static final String DB_PASSWORD = "postgress";
@@ -105,12 +99,10 @@ public class Server {
                 isWebSocket = true;
                 System.out.println("WebSocket connection detected");
 
-                // Перенаправляем в WebSocket сервер
                 Main.getWebSocketServer().handleWebSocketConnection(asyncChannel, requestData);
-                return; // Не закрываем соединение!
+                return;
             }
 
-            // Обычная HTTP обработка
             HttpRequest request = new HttpRequest(requestData);
             HttpResponse response = new HttpResponse();
 
@@ -123,7 +115,6 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Error handling client: " + e.getMessage());
         } finally {
-            // Закрываем соединение только для HTTP, не для WebSocket
             if (asyncChannel != null && !isWebSocket) {
                 try {
                     asyncChannel.close();
@@ -144,7 +135,6 @@ public class Server {
         try {
             String path = request.getPath();
 
-            // Обработка новых API endpoints
             if ("POST".equals(request.getMethod())) {
                 if ("/api/validate-token".equals(path)) {
                     handleValidateToken(request, response);
@@ -155,7 +145,6 @@ public class Server {
                 }
             }
 
-            // Стандартная обработка через handler
             String body = handler.handle(request, response);
 
             if (body != null && !body.isBlank()) {
@@ -177,7 +166,6 @@ public class Server {
         }
     }
 
-    // Новые методы для обработки API endpoints
     private void handleValidateToken(HttpRequest request, HttpResponse response) {
         try {
             String requestBody = request.getBody();
@@ -206,7 +194,6 @@ public class Server {
 
     private void handleRefreshToken(HttpRequest request, HttpResponse response) {
         try {
-            // Получаем refresh token из cookie
             String refreshToken = getCookieValue(request, "refresh_token");
 
             if (refreshToken != null && validateRefreshToken(refreshToken)) {
@@ -235,7 +222,6 @@ public class Server {
         }
     }
 
-    // Вспомогательные методы
     private Map<String, Object> parseJsonBody(String body) {
         try {
             return JsonXmlExample.parseJson(body);
@@ -321,216 +307,4 @@ public class Server {
         sendResponse(channel, response);
     }
 
-    // Метод для преобразования AsynchronousSocketChannel в Socket
-    private Socket asyncChannelToSocket(AsynchronousSocketChannel asyncChannel) {
-        try {
-            InetSocketAddress remoteAddress = (InetSocketAddress) asyncChannel.getRemoteAddress();
-            Socket socket = new Socket();
-            socket.setReuseAddress(true);
-            return socket;
-        } catch (IOException e) {
-            System.err.println("Error creating socket from async channel: " + e.getMessage());
-            return null;
-        }
-    }
-    // ДОБАВЬТЕ эти методы в класс WebSocketMessageProcessor
-
-    private String handleJsonJoinChat(Map<String, Object> messageData, WebSocketServer.WebSocketClient wsClient) {
-        if (!wsClient.isAuthenticated()) {
-            return "{\"type\":\"error\",\"message\":\"Not authenticated\"}";
-        }
-
-        String chatId = (String) messageData.get("chat_id");
-        if (chatId == null) {
-            return "{\"type\":\"error\",\"message\":\"Missing chat_id\"}";
-        }
-
-        int userId = Integer.parseInt(wsClient.getUserId());
-
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            // Проверяем доступ к чату
-            String checkSql = "SELECT 1 FROM chat_members cm " +
-                    "WHERE cm.chat_id = ? AND cm.user_id = ?";
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setInt(1, Integer.parseInt(chatId));
-                checkStmt.setInt(2, userId);
-                if (!checkStmt.executeQuery().next()) {
-                    return "{\"type\":\"error\",\"message\":\"Access denied to chat\"}";
-                }
-            }
-
-            // Получаем информацию о чате
-            String chatInfoSql = "SELECT chat_name, chat_type FROM chats WHERE chat_id = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(chatInfoSql)) {
-                stmt.setInt(1, Integer.parseInt(chatId));
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    String chatName = rs.getString("chat_name");
-                    String chatType = rs.getString("chat_type");
-
-                    wsClient.setCurrentChatId(chatId);
-
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("type", "joined_chat");
-                    response.put("chat_id", chatId);
-                    response.put("chat_name", chatName);
-                    response.put("chat_type", chatType);
-
-                    return JsonBuilder.build(response);
-                }
-            }
-
-            return "{\"type\":\"error\",\"message\":\"Chat not found\"}";
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "{\"type\":\"error\",\"message\":\"Failed to join chat\"}";
-        }
-    }
-
-    private String handleGetChatsJson(WebSocketServer.WebSocketClient wsClient) {
-        if (!wsClient.isAuthenticated()) {
-            return "{\"type\":\"error\",\"message\":\"Not authenticated\"}";
-        }
-
-        int userId = Integer.parseInt(wsClient.getUserId());
-
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String sql = """
-            SELECT c.chat_id, c.chat_name, c.chat_type, 
-                   (SELECT m.message_text FROM messages m 
-                    WHERE m.chat_id = c.chat_id 
-                    ORDER BY m.sent_at DESC LIMIT 1) as last_message,
-                   (SELECT m.sent_at FROM messages m 
-                    WHERE m.chat_id = c.chat_id 
-                    ORDER BY m.sent_at DESC LIMIT 1) as last_message_time,
-                   (SELECT COUNT(*) FROM messages m 
-                    WHERE m.chat_id = c.chat_id AND m.sent_at > (
-                        SELECT COALESCE(MAX(rr.read_at), '1970-01-01') 
-                        FROM read_receipts rr 
-                        JOIN messages m2 ON rr.message_id = m2.message_id 
-                        WHERE m2.chat_id = c.chat_id AND rr.user_id = ?
-                    )) as unread_count
-            FROM chats c
-            JOIN chat_members cm ON c.chat_id = cm.chat_id
-            WHERE cm.user_id = ?
-            ORDER BY last_message_time DESC NULLS LAST
-            """;
-
-            List<Map<String, Object>> chats = new ArrayList<>();
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, userId);
-                stmt.setInt(2, userId);
-                ResultSet rs = stmt.executeQuery();
-
-                while (rs.next()) {
-                    Map<String, Object> chat = new HashMap<>();
-                    chat.put("chat_id", rs.getInt("chat_id"));
-                    chat.put("chat_name", rs.getString("chat_name"));
-                    chat.put("chat_type", rs.getString("chat_type"));
-                    chat.put("last_message", rs.getString("last_message"));
-                    chat.put("last_message_time", rs.getTimestamp("last_message_time"));
-                    chat.put("unread_count", rs.getInt("unread_count"));
-                    chats.add(chat);
-                }
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("type", "chats");
-            response.put("chats", chats);
-
-            return JsonBuilder.build(response);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "{\"type\":\"error\",\"message\":\"Failed to get chats\"}";
-        }
-    }
-
-    private String handleGetMessagesJson(Map<String, Object> messageData, WebSocketServer.WebSocketClient wsClient) {
-        if (!wsClient.isAuthenticated()) {
-            return "{\"type\":\"error\",\"message\":\"Not authenticated\"}";
-        }
-
-        String chatId = (String) messageData.get("chat_id");
-        if (chatId == null) {
-            return "{\"type\":\"error\",\"message\":\"Missing chat_id\"}";
-        }
-
-        int userId = Integer.parseInt(wsClient.getUserId());
-
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            // Проверяем доступ к чату
-            String checkSql = "SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?";
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setInt(1, Integer.parseInt(chatId));
-                checkStmt.setInt(2, userId);
-                if (!checkStmt.executeQuery().next()) {
-                    return "{\"type\":\"error\",\"message\":\"Access denied\"}";
-                }
-            }
-
-            String sql = """
-            SELECT m.message_id, m.message_text, m.sent_at, 
-                   u.user_id as sender_id, u.user_name as sender_name,
-                   (u.user_id = ?) as is_own
-            FROM messages m
-            JOIN users u ON m.sender_id = u.user_id
-            WHERE m.chat_id = ? AND m.is_deleted = false
-            ORDER BY m.sent_at ASC
-            """;
-
-            List<Map<String, Object>> messages = new ArrayList<>();
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, userId);
-                stmt.setInt(2, Integer.parseInt(chatId));
-                ResultSet rs = stmt.executeQuery();
-
-                while (rs.next()) {
-                    Map<String, Object> message = new HashMap<>();
-                    message.put("message_id", rs.getInt("message_id"));
-                    message.put("sender_id", rs.getInt("sender_id"));
-                    message.put("sender_name", rs.getString("sender_name"));
-                    message.put("text", rs.getString("message_text"));
-                    message.put("time", rs.getTimestamp("sent_at"));
-                    message.put("is_own", rs.getBoolean("is_own"));
-                    messages.add(message);
-                }
-            }
-
-            // Обновляем время последнего прочтения
-            updateReadReceipts(conn, userId, Integer.parseInt(chatId));
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("type", "messages");
-            response.put("chat_id", chatId);
-            response.put("messages", messages);
-
-            return JsonBuilder.build(response);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "{\"type\":\"error\",\"message\":\"Failed to get messages\"}";
-        }
-    }
-
-    private void updateReadReceipts(Connection conn, int userId, int chatId) throws SQLException {
-        String sql = """
-        INSERT INTO read_receipts (message_id, user_id, read_at)
-        SELECT m.message_id, ?, NOW()
-        FROM messages m
-        WHERE m.chat_id = ? AND m.sent_at <= NOW() AND m.is_deleted = false
-        AND NOT EXISTS (
-            SELECT 1 FROM read_receipts rr 
-            WHERE rr.message_id = m.message_id AND rr.user_id = ?
-        )
-        """;
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, chatId);
-            stmt.setInt(3, userId);
-            stmt.executeUpdate();
-        }
-    }
 }
