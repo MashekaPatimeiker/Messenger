@@ -44,6 +44,26 @@ public class JsonXmlExample {
         response.put("timestamp", System.currentTimeMillis());
         return JsonBuilder.build(response);
     }
+    public static String toJson(Object object) {
+        try {
+            return JsonBuilder.build(object);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return getErrorResponse("Failed to convert object to JSON", 500);
+        }
+    }
+    public static Map<String, Object> parseJson(String json) {
+        try {
+            return JsonParser.parse(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("status", "error");
+            error.put("message", "Failed to parse JSON");
+            error.put("original", json);
+            return error;
+        }
+    }
     public static String getErrorResponse(String message, int code) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", "error");

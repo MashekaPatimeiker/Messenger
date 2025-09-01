@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Login</title>
+    <link rel="stylesheet" href="/css/login.css">
+</head>
+<body>
+<div class="auth-container">
+    <div class="login-container" id="loginContainer">
+        <h2>Вход в чат</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Имя пользователя:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="auth-button">Войти</button>
+            <div id="loginError" class="error-message"></div>
+        </form>
+
+        <div class="new-user-placeholder">
+            <p>Новый пользователь? <a href="#" id="showRegisterLink">Зарегистрироваться</a></p>
+        </div>
+    </div>
+
+    <div class="register-container" id="registerContainer" style="display: none;">
+        <h2>Регистрация</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="regUsername">Имя пользователя:</label>
+                <input type="text" id="regUsername" name="username" required minlength="3">
+                <span class="input-hint">Минимум 3 символа</span>
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Email:</label>
+                <input type="email" id="regEmail" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Пароль:</label>
+                <input type="password" id="regPassword" name="password" required minlength="6">
+                <span class="input-hint">Минимум 6 символов</span>
+            </div>
+            <div class="form-group">
+                <label for="regConfirmPassword">Подтвердите пароль:</label>
+                <input type="password" id="regConfirmPassword" name="confirmPassword" required>
+            </div>
+            <button type="submit" class="auth-button">Зарегистрироваться</button>
+            <div id="registerError" class="error-message"></div>
+        </form>
+
+        <div class="existing-user-placeholder">
+            <p>Уже есть аккаунт? <a href="#" id="showLoginLink">Войти</a></p>
+        </div>
+    </div>
+</div>
+
+<script src="/js/login.js"></script>
+</body>
+</html>

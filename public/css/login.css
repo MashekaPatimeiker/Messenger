@@ -1,0 +1,120 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    display: flex;
+    height: 100vh;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    justify-content: center;
+    align-items: center;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-container, .register-container {
+    background-color: #252525;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+    transition: all 0.3s ease;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #aaa;
+    font-size: 14px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #FF096C;
+}
+
+.input-hint {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.auth-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #FF096C;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.auth-button:hover {
+    background-color: #e00860;
+}
+
+.error-message {
+    color: #ff4d4d;
+    margin: 15px 0;
+    font-size: 13px;
+    text-align: center;
+    min-height: 18px;
+}
+
+.new-user-placeholder, .existing-user-placeholder {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
+    text-align: center;
+    color: #aaa;
+    font-size: 14px;
+}
+
+.new-user-placeholder a, .existing-user-placeholder a {
+    color: #FF096C;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.new-user-placeholder a:hover, .existing-user-placeholder a:hover {
+    color: #e00860;
+    text-decoration: underline;
+}
+
+.password-mismatch {
+    border-color: #ff4d4d !important;
+}
