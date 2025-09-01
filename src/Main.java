@@ -8,6 +8,7 @@ import http.sitediff.StaticFileHandler;
 import json.JsonBuilder;
 import json.JsonParser;
 import json.JsonXmlExample;
+import security.SimpleTokenUtils;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -21,18 +22,95 @@ import java.util.*;
 
 public class Main {
     private static boolean authEnabled;
-    static final String SECRET_TOKEN = "sample-jwt-token";
     static final String DB_URL = "jdbc:postgresql://localhost:5432/postgres";
     static final String DB_USER = "postgres";
     static final String DB_PASSWORD = "postgress";
-
+    private static WebSocketServer webSocketServer;
     public static void main(String[] args) {
         initializeConfiguration();
         initializeDatabaseConnection();
+
+        // Запускаем WebSocket сервер
+        startWebSocketServer();
+        System.out.println("WebSocket server status: " +
+                (webSocketServer != null ? "RUNNING" : "NOT RUNNING"));
+
+        if (webSocketServer != null) {
+            System.out.println("WebSocket server should be listening on:");
+            System.out.println("ws://localhost:8081/ws");
+            System.out.println("ws://127.0.0.1:8081/ws");
+            System.out.println("ws://192.168.100.13:8081/ws");
+        }
+
+        startTokenCleanupTask();
         Router router = setupRouter();
+        setupLogoutRoute(router);
+        setupUserInfoRoute(router);
+        setupCheckAuthRoute(router);
         setupStaticFiles(router);
         setupApiRoutes(router);
         startServer(router);
+    }
+    public static WebSocketServer getWebSocketServer() {
+        return webSocketServer;
+    }
+    private static void startTokenCleanupTask() {
+        // Очищаем просроченные токены каждые 5 минут
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                SimpleTokenUtils.cleanupExpiredTokens();
+                System.out.println("Cleaned up expired tokens");
+            }
+        }, 300000, 300000); // 5 минут
+    }
+
+    // Добавьте этот метод
+    private static void setupUserInfoRoute(Router router) {
+        router.get("/api/user-info", (req, res) -> {
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                String token = getAuthTokenFromRequest(req);
+                int userId = getUserIdFromToken(conn, token);
+
+                if (userId == -1) {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Unauthorized", 401);
+                }
+
+                // Получаем информацию о пользователе
+                String sql = "SELECT user_id, user_name FROM users WHERE user_id = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
+
+                    if (rs.next()) {
+                        Map<String, Object> userInfo = new HashMap<>();
+                        userInfo.put("id", rs.getInt("user_id"));
+                        userInfo.put("username", rs.getString("user_name"));
+
+                        res.addHeader("Content-Type", "application/json");
+                        return JsonBuilder.build(Map.of("user", userInfo));
+                    }
+                }
+
+                res.setStatusCode(404);
+                return JsonXmlExample.getErrorResponse("User not found", 404);
+
+            } catch (Exception e) {
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Server error", 500);
+            }
+        });
+    }
+    private static void startWebSocketServer() {
+        int webSocketPort = 8081; // Явно указываем порт
+        WebSocketMessageProcessor processor = new WebSocketMessageProcessor(webSocketServer);
+        webSocketServer = new WebSocketServer(webSocketPort);
+
+        new Thread(() -> {
+            webSocketServer.start();
+            System.out.println("WebSocket server started on port " + webSocketPort);
+        }).start();
     }
 
     private static void initializeConfiguration() {
@@ -91,8 +169,45 @@ public class Main {
         setupGetMessagesRoute(router);
         setupGetChatsRoute(router);
         setupSendMessageRoute(router);
+        setupRefreshTokenRoute(router);      // Add this
+        setupUserInfoRoute(router);
+        setupValidateTokenRoute(router);
     }
+    private static void setupValidateTokenRoute(Router router) {
+        router.post("/api/validate-token", (req, res) -> {
+            try {
+                Map<String, Object> requestData = JsonParser.parse(req.getBody());
+                String token = (String) requestData.get("token");
 
+                if (token == null || token.isEmpty()) {
+                    res.setStatusCode(400);
+                    return JsonXmlExample.getErrorResponse("Token required", 400);
+                }
+
+                // Валидируем токен
+                SimpleTokenUtils.TokenData tokenData = SimpleTokenUtils.validateToken(token);
+
+                if (tokenData != null) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "valid");
+                    response.put("user_id", tokenData.getUserId());
+                    response.put("username", tokenData.getUsername());
+                    response.put("expires_in", tokenData.getExpirationTime() - System.currentTimeMillis());
+
+                    res.addHeader("Content-Type", "application/json");
+                    return JsonBuilder.build(response);
+                } else {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Invalid token", 401);
+                }
+
+            } catch (Exception e) {
+                System.err.println("Validate token error: " + e.getMessage());
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Server error", 500);
+            }
+        });
+    }
     private static void setupChatRoutes(Router router) {
         // Этот метод теперь пустой, так как все маршруты вынесены в отдельные методы
     }
@@ -297,7 +412,67 @@ public class Main {
             insertStmt.executeUpdate();
         }
     }
+    private static void setupRefreshTokenRoute(Router router) {
+        router.post("/api/refresh-token", (req, res) -> {
+            try {
+                String token = null;
+                String cookieHeader = req.getHeader("Cookie");
 
+                if (cookieHeader != null) {
+                    for (String cookie : cookieHeader.split(";")) {
+                        if (cookie.trim().startsWith("auth_token=")) {
+                            token = cookie.trim().substring("auth_token=".length());
+                            break;
+                        }
+                    }
+                }
+
+                if (token == null) {
+                    String authHeader = req.getHeader("Authorization");
+                    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                        token = authHeader.substring(7);
+                    }
+                }
+
+                if (token == null || token.isEmpty()) {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Token required", 401);
+                }
+
+                try {
+                    Map<String, Object> claims = SimpleTokenUtils.verifyToken(token);
+                    int userId = (Integer) claims.get("user_id");
+                    String username = (String) claims.get("username");
+
+                    String newToken = SimpleTokenUtils.generateToken(userId, username);
+
+                    // Используем те же настройки cookie
+                    String cookieSettings = "auth_token=" + newToken +
+                            "; Path=/" +
+                            "; HttpOnly" +
+                            "; SameSite=Lax";
+
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "success");
+                    response.put("token", newToken);
+
+                    res.addHeader("Content-Type", "application/json");
+                    res.addHeader("Set-Cookie", cookieSettings);
+
+                    return JsonBuilder.build(response);
+
+                } catch (Exception e) {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Invalid token", 401);
+                }
+
+            } catch (Exception e) {
+                System.err.println("Refresh token error: " + e.getMessage());
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Server error", 500);
+            }
+        });
+    }
     private static void setupLoginRoute(Router router) {
         router.post("/api/login", (req, res) -> {
             try {
@@ -305,13 +480,49 @@ public class Main {
                 String username = ((String) requestData.get("username")).trim();
                 String password = ((String) requestData.get("password")).trim();
 
-                System.out.println("[DEBUG] Login attempt: username='" + username + "', password='" + password + "'");
+                System.out.println("[DEBUG] Login attempt: username='" + username + "'");
 
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String storedPassword = getStoredPassword(conn, username);
+                    String sql = "SELECT user_id, user_password FROM users WHERE user_name = ?";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setString(1, username);
+                        ResultSet rs = stmt.executeQuery();
 
-                    if (storedPassword != null && password.equals(storedPassword)) {
-                        return createSuccessfulLoginResponse(res);
+                        if (rs.next()) {
+                            String storedPassword = rs.getString("user_password");
+                            int userId = rs.getInt("user_id");
+
+                            if (password.equals(storedPassword)) {
+                                String token = SimpleTokenUtils.generateToken(userId, username);
+
+                                // Динамически определяем настройки cookie
+                                String host = req.getHeader("Host");
+// НА ЭТО:
+                                boolean isLocalhost = host.contains("localhost") || host.contains("127.0.0.1") || host.contains("192.168.");
+                                String cookieSettings = "auth_token=" + token +
+                                        "; Path=/" +
+                                        "; HttpOnly" +
+                                        "; SameSite=" + (isLocalhost ? "Lax" : "None") +
+                                        (isLocalhost ? "" : "; Secure");
+                                System.out.println("[DEBUG LOGIN] Setting cookie: " + cookieSettings);
+                                System.out.println("[DEBUG LOGIN] Host header: " + host);
+                                System.out.println("[DEBUG LOGIN] User-Agent: " + req.getHeader("User-Agent"));
+
+                                Map<String, Object> response = new HashMap<>();
+                                response.put("status", "success");
+                                response.put("token", token);
+                                response.put("user", Map.of(
+                                        "id", userId,
+                                        "username", username
+                                ));
+
+                                res.addHeader("Content-Type", "application/json");
+                                res.addHeader("Set-Cookie", cookieSettings);
+
+                                System.out.println("[DEBUG LOGIN] Response headers: " + res.getHeaders());
+                                return JsonBuilder.build(response);
+                            }
+                        }
                     }
                 }
 
@@ -326,35 +537,27 @@ public class Main {
             }
         });
     }
-
-    private static String getStoredPassword(Connection conn, String username) throws SQLException {
-        String sql = "SELECT user_password FROM users WHERE user_name = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, username);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next() ? rs.getString("user_password") : null;
-        }
-    }
-
-    private static String createSuccessfulLoginResponse(HttpResponse res) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("token", SECRET_TOKEN);
-        res.addHeader("Content-Type", "application/json");
-        res.addHeader("Set-Cookie", "auth_token=" + SECRET_TOKEN + "; Path=/; HttpOnly");
-        return JsonBuilder.build(response);
-    }
-
     private static void setupCheckAuthRoute(Router router) {
         router.get("/api/check-auth", (req, res) -> {
             String token = getAuthTokenFromRequest(req);
+            System.out.println("[DEBUG CHECK-AUTH] Token: " + (token.isEmpty() ? "EMPTY" : "PRESENT"));
+
+            SimpleTokenUtils.TokenData tokenData = SimpleTokenUtils.validateToken(token);
+            System.out.println("[DEBUG CHECK-AUTH] Token valid: " + (tokenData != null));
+
             Map<String, Object> response = new HashMap<>();
-            response.put("authenticated", SECRET_TOKEN.equals(token));
+            response.put("authenticated", tokenData != null);
+            if (tokenData != null) {
+                response.put("user", Map.of(
+                        "id", tokenData.getUserId(),
+                        "username", tokenData.getUsername()
+                ));
+            }
+
             res.addHeader("Content-Type", "application/json");
             return JsonBuilder.build(response);
         });
     }
-
     private static void setupStaticPageRoutes(Router router) {
         router.get("/chat", (req, res) -> handleChatPageRequest(req, res));
         router.get("/login", (req, res) -> handleLoginPageRequest(res));
@@ -366,13 +569,9 @@ public class Main {
     }
 
     private static String handleChatPageRequest(HttpRequest req, HttpResponse res) {
-        String authToken = getAuthTokenFromRequest(req);
-
-        if (authEnabled && !SECRET_TOKEN.equals(authToken)) {
-            res.setStatusCode(302);
-            res.addHeader("Location", "/login");
-            return "";
-        }
+        // Добавьте проверку токена
+        String token = getAuthTokenFromRequest(req);
+        System.out.println("[DEBUG CHAT] Token in chat request: " + (token.isEmpty() ? "EMPTY" : "PRESENT"));
 
         res.addHeader("Content-Type", "text/html; charset=UTF-8");
         try {
@@ -472,17 +671,8 @@ public class Main {
     }
 
     private static int getUserIdFromToken(Connection conn, String token) throws SQLException {
-        if (!SECRET_TOKEN.equals(token)) {
-            return -1;
-        }
-
-        // В реальном приложении здесь бы расшифровывался JWT токен
-        // Пока используем упрощенную логику - возвращаем ID первого пользователя
-        String sql = "SELECT user_id FROM users LIMIT 1";
-        try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(sql);
-            return rs.next() ? rs.getInt("user_id") : -1;
-        }
+        SimpleTokenUtils.TokenData tokenData = SimpleTokenUtils.validateToken(token);
+        return tokenData != null ? tokenData.getUserId() : -1;
     }
 
     private static void setupProtectedRoute(Router router) {
@@ -494,11 +684,6 @@ public class Main {
             }
 
             String authToken = getAuthTokenFromRequest(req);
-            if (!SECRET_TOKEN.equals(authToken)) {
-                res.setStatusCode(401);
-                res.addHeader("Content-Type", "application/json; charset=UTF-8");
-                return JsonXmlExample.getErrorResponse("Unauthorized", 401);
-            }
 
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
@@ -522,7 +707,7 @@ public class Main {
     }
 
     // Добавляем метод generateWebSocketAccept в Main
-    private static String generateWebSocketAccept(String key) {
+    static String generateWebSocketAccept(String key) {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
             String magicString = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -542,17 +727,22 @@ public class Main {
             System.err.println("Failed to create default files: " + e.getMessage());
         }
     }
-
     private static String getAuthTokenFromRequest(HttpRequest req) {
         String cookieHeader = req.getHeaders().getOrDefault("Cookie", "");
-        return Arrays.stream(cookieHeader.split(";"))
+        System.out.println("[DEBUG] Full Cookie header: " + cookieHeader);
+        System.out.println("[DEBUG] Request host: " + req.getHeader("Host"));
+        System.out.println("[DEBUG] User-Agent: " + req.getHeader("User-Agent"));
+
+        String token = Arrays.stream(cookieHeader.split(";"))
                 .map(String::trim)
                 .filter(c -> c.startsWith("auth_token="))
                 .map(c -> c.substring("auth_token=".length()))
                 .findFirst()
                 .orElse("");
-    }
 
+        System.out.println("[DEBUG] Extracted token: " + (token.isEmpty() ? "EMPTY" : "FOUND (" + token.length() + " chars)"));
+        return token;
+    }
     // Метод для извлечения query параметров из запроса
     private static Map<String, String> getQueryParams(HttpRequest req) {
         Map<String, String> queryParams = new HashMap<>();
@@ -567,11 +757,11 @@ public class Main {
             for (String pair : pairs) {
                 String[] keyValue = pair.split("=", 2);
                 if (keyValue.length == 2) {
-                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8.name());
-                    String value = URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8.name());
+                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
+                    String value = URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8);
                     queryParams.put(key, value);
                 } else if (keyValue.length == 1) {
-                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8.name());
+                    String key = URLDecoder.decode(keyValue[0], StandardCharsets.UTF_8);
                     queryParams.put(key, "");
                 }
             }
@@ -580,5 +770,21 @@ public class Main {
         }
 
         return queryParams;
+    }
+    private static void setupLogoutRoute(Router router) {
+        router.post("/api/logout", (req, res) -> {
+            String token = getAuthTokenFromRequest(req);
+
+            // Используем те же настройки cookie для удаления
+            String cookieSettings = "auth_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+                    "; HttpOnly" +
+                    "; SameSite=Lax";
+            res.addHeader("Set-Cookie", cookieSettings);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            res.addHeader("Content-Type", "application/json");
+            return JsonBuilder.build(response);
+        });
     }
 }

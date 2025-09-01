@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат с друзьями</title>
     <link rel="stylesheet" href="/css/chat.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
 </head>
 <body>
 <div class="buttons-sidebar">
@@ -34,29 +35,7 @@
         </div>
     </div>
 
-    <ul class="friends-list" id="friends-list">
-        <li class="friend-item" data-friend="December00">
-            <div class="friend-avatar"></div>
-            <div>
-                <span class="friend-name">December00</span>
-                <div class="friend-last-message">Call me later</div>
-            </div>
-        </li>
-        <li class="friend-item" data-friend="Tanyusha❤">
-            <div class="friend-avatar"></div>
-            <div>
-                <span class="friend-name">Tanyusha❤</span>
-                <div class="friend-last-message">Wanna play cs2 today?</div>
-            </div>
-        </li>
-        <li class="friend-item" data-friend="Her">
-            <div class="friend-avatar"></div>
-            <div>
-                <span class="friend-name">Her</span>
-                <div class="friend-last-message">Sit on me pls...</div>
-            </div>
-        </li>
-    </ul>
+    <ul class="friends-list" id="friends-list"></ul>
 </div>
 
 <div class="chat-container">
@@ -75,29 +54,7 @@
         </div>
     </div>
 
-    <div class="chat-messages" id="chat-messages">
-        <div class="message message-outgoing">
-            <div class="message-content">Are u ready?</div>
-            <div class="message-info">
-                <span class="user-message">You</span>
-                <span class="message-time">21:42</span>
-            </div>
-        </div>
-        <div class="message message-incoming">
-            <div class="message-content">No</div>
-            <div class="message-info">
-                <span class="user-message">December00</span>
-                <span class="message-time">21:42</span>
-            </div>
-        </div>
-        <div class="message message-incoming">
-            <div class="message-content">Call me later.</div>
-            <div class="message-info">
-                <span class="user-message">December00</span>
-                <span class="message-time">21:42</span>
-            </div>
-        </div>
-    </div>
+    <div class="chat-messages" id="chat-messages"></div>
 
     <div class="chat-input">
         <textarea id="message-input" placeholder="Написать сообщение..."></textarea>

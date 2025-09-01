@@ -27,7 +27,8 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             body: JSON.stringify({
                 username: username,
                 password: password
-            })
+            }),
+            credentials: 'include' // ВАЖНО: для получения cookies
         });
 
         const data = await response.json();
@@ -37,6 +38,18 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         }
 
         if (data.status === "success") {
+            // СОХРАНЯЕМ ТОКЕН В localStorage
+            if (data.token) {
+                localStorage.setItem('auth_token', data.token);
+                console.log('Token saved to localStorage:', data.token);
+            }
+
+            // Дополнительно: сохраняем информацию о пользователе
+            if (data.user) {
+                localStorage.setItem('user_id', data.user.id);
+                localStorage.setItem('username', data.user.username);
+            }
+
             window.location.href = '/chat';
         } else {
             throw new Error(data.message || 'Authentication failed');
@@ -96,4 +109,37 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         console.error('Registration error:', error);
         errorElement.textContent = error.message;
     }
+});
+
+// Функция для проверки, авторизован ли пользователь
+async function checkAuthStatus() {
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            // Если есть токен, пробуем проверить его валидность
+            const response = await fetch('/api/check-auth', {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.authenticated) {
+                    // Если уже авторизован, перенаправляем в чат
+                    window.location.href = '/chat';
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Auth check failed, showing login page');
+    }
+}
+
+// Проверяем статус авторизации при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthStatus();
+
+    // Показываем отладочную информацию
+    const token = localStorage.getItem('auth_token');
+    console.log('Current token in localStorage:', token);
+    console.log('Cookies:', document.cookie);
 });
