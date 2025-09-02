@@ -11,6 +11,462 @@ body {
     background-color: #1a1a1a;
     color: #e0e0e0;
 }
+
+/* Контейнеры макета */
+.buttons-sidebar {
+    width: 60px;
+    background-color: #252525;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    z-index: 10;
+}
+
+.friends-sidebar {
+    width: 250px;
+    background-color: #252525;
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #1e1e1e;
+}
+
+/* Кнопки сайдбара */
+.sidebar-button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #FF096C;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+}
+
+.sidebar-button:hover {
+    background-color: #e00860;
+    transform: scale(1.05);
+}
+
+/* Заголовок списка друзей */
+.friends-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #252525;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.friends-header h2 {
+    font-size: 18px;
+    color: #e0e0e0;
+}
+
+.search-friend-button {
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.search-friend-button:hover {
+    background-color: #333;
+}
+
+/* Стили для поиска */
+.search-container {
+    padding: 15px;
+    border-bottom: 1px solid #333;
+    background-color: #252525;
+    transition: all 0.3s ease;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 15px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 20px;
+    color: #e0e0e0;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #FF096C;
+}
+
+.search-input::placeholder {
+    color: #888;
+}
+
+.search-results {
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 8px;
+    background-color: #252525;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #333;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background-color: #333;
+}
+
+.search-result-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #FF096C;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.search-result-name {
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+/* Список друзей */
+.friends-list {
+    list-style: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.friend-item {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+    border-left: 3px solid transparent;
+}
+
+.friend-item:hover {
+    background-color: #333;
+}
+
+.friend-item.active {
+    background-color: #333;
+    border-left: 3px solid #FF096C;
+}
+
+.friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #444;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e0e0e0;
+    font-weight: bold;
+}
+
+.friend-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.friend-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-last-message {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unread-indicator {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #FF096C;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.friend-item.has-unread .unread-indicator {
+    opacity: 1;
+}
+
+/* Заголовок чата */
+.chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #252525;
+}
+
+.chat-current-friend {
+    display: flex;
+    align-items: center;
+}
+
+.chat-current-friend .friend-avatar {
+    margin-right: 12px;
+}
+
+.friend-status {
+    font-size: 12px;
+    color: #999;
+}
+
+.videochat-button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #FF096C;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.videochat-button:hover {
+    background-color: #e00860;
+    transform: scale(1.05);
+}
+
+/* Сообщения чата */
+.chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    scroll-behavior: smooth;
+}
+
+.message {
+    margin-bottom: 15px;
+    max-width: 70%;
+    width: fit-content;
+    animation: messageAppear 0.3s forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.message-incoming {
+    align-self: flex-start;
+}
+
+.message-outgoing {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.message-content {
+    padding: 10px 15px;
+    border-radius: 18px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.message-incoming .message-content {
+    background-color: #333;
+    border-top-left-radius: 5px;
+}
+
+.message-outgoing .message-content {
+    background-color: #FF096C;
+    border-top-right-radius: 5px;
+}
+
+.message-time {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+
+.message-outgoing .message-time {
+    text-align: right;
+}
+
+/* Индикатор набора текста */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    color: #666;
+    font-style: italic;
+}
+
+.typing-dots {
+    display: flex;
+    margin-right: 8px;
+}
+
+.typing-dots span {
+    width: 6px;
+    height: 6px;
+    margin: 0 2px;
+    background-color: #666;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* Поле ввода сообщения */
+.chat-input {
+    padding: 15px 20px;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    background-color: #252525;
+}
+
+.chat-input textarea {
+    flex: 1;
+    background-color: #333;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    color: #e0e0e0;
+    resize: none;
+    height: 40px;
+    max-height: 120px;
+    outline: none;
+    transition: height 0.2s ease-out;
+}
+
+.chat-input textarea::placeholder {
+    color: #888;
+}
+
+.send-button {
+    background-color: #FF096C;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.send-button:hover {
+    background-color: #e00860;
+    transform: scale(1.05);
+}
+
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #FF096C;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-30px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Анимации */
+@keyframes messageAppear {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.friend-item.new-friend {
+    animation: friendAppear 0.4s ease-out;
+}
+
+@keyframes friendAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Статус соединения */
 .connection-status {
     position: fixed;
     top: 10px;
@@ -44,451 +500,4 @@ body {
 .connection-status.failed {
     background-color: #f44336;
     color: white;
-}
-
-.typing-indicator {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    color: #666;
-    font-style: italic;
-}
-
-.typing-dots {
-    display: flex;
-    margin-right: 8px;
-}
-
-.typing-dots span {
-    width: 6px;
-    height: 6px;
-    margin: 0 2px;
-    background-color: #666;
-    border-radius: 50%;
-    animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes typing {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-}
-.friends-sidebar {
-    width: 250px;
-    background-color: #252525;
-    border-right: 1px solid #333;
-    overflow-y: auto;
-    padding: 20px 0;
-}
-
-.friends-header {
-    padding: 0 20px 15px;
-    border-bottom: 1px solid #333;
-    margin-bottom: 15px;
-}
-
-.friends-list {
-    list-style: none;
-}
-
-.friend-item {
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.friend-item:hover {
-    background-color: #333;
-}
-
-.friend-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #444;
-    margin: 10px;
-    overflow: hidden;
-}
-
-.friend-name {
-    font-weight: 500;
-}
-.buttons-sidebar {
-    width: 60px;
-    background-color: #252525;
-    border-right: 1px solid #333;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px 0;
-}
-
-.sidebar-button {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background-color: #FF096C;
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-    transition: background-color 0.2s;
-}
-
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.chat-header-actions {
-    display: flex;
-    align-items: center;
-}
-
-.more-options-button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    margin-left: 15px;
-}
-
-.chat-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: #1e1e1e;
-}
-.chat-current-friend {
-    display: flex;
-    align-items: center;
-}
-
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background-color: #1a1a1a;
-}
-
-.message {
-    margin-bottom: 15px;
-    max-width: 70%;
-    width: fit-content;
-}
-
-.message-incoming {
-    align-self: flex-start;
-}
-
-.message-outgoing {
-    align-self: flex-end;
-    margin-left: auto;
-}
-
-.message-content {
-    padding: 10px 15px;
-    border-radius: 18px;
-    line-height: 1.4;
-    word-wrap: break-word;
-}
-
-.message-incoming .message-content {
-    background-color: #333;
-    border-top-left-radius: 5px;
-    text-align: left;
-}
-
-.message-outgoing .message-content {
-    background-color: #FF096C;
-    border-top-right-radius: 5px;
-    text-align: right;
-}
-
-.message-time {
-    font-size: 12px;
-    color: #999;
-    margin-top: 5px;
-    text-align: right;
-}
-
-.chat-input {
-    padding: 15px 20px;
-    border-top: 1px solid #333;
-    display: flex;
-    align-items: center;
-}
-
-.chat-input textarea {
-    flex: 1;
-    background-color: #252525;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 15px;
-    color: #e0e0e0;
-    resize: none;
-    height: 40px;
-    max-height: 120px;
-    outline: none;
-}
-
-.send-button {
-    background-color: #FF096C;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    margin-left: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.videochat-sidebar {
-    width: 60px;
-    background-color: #1e1e1e;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.friend-item {
-    position: relative;
-}
-
-.friend-last-message {
-    font-size: 12px;
-    color: #999;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 150px;
-    text-align: left;
-    bottom: 10px;
-    right: 20px;
-}
-
-.videochat-button {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background-color: #FF096C;
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 5px;
-    transition: background-color 0.2s;
-}
-.user-message {
-    font-size: 12px;
-    color: #999;
-    margin-top: 5px;
-    text-align: left;
-}
-
-.message-outgoing .user-message {
-    text-align: right;
-    color: #999;
-}
-
-.message-incoming .user-message {
-    text-align: left;
-    color: #999;
-}
-
-.videochat-icon {
-    font-size: 20px;
-}
-
-.icon {
-    font-size: 20px;
-}
-.chat-messages {
-    overflow-y: auto;
-    scroll-behavior: smooth;
-}
-/* Добавленные стили для динамических элементов */
-.add-friend-container {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-    background-color: #252525;
-    border-bottom: 1px solid #333;
-}
-
-.add-friend-container.active {
-    max-height: 120px;
-    padding: 15px 20px;
-}
-
-.add-friend-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.add-friend-input {
-    background-color: #333;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 15px;
-    color: #e0e0e0;
-    outline: none;
-    width: 100%;
-}
-
-.add-friend-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.add-friend-button {
-    padding: 8px 15px;
-    border-radius: 20px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-.cancel-friend-button {
-    background-color: #333;
-    color: #e0e0e0;
-}
-
-.cancel-friend-button:hover {
-    background-color: #444;
-}
-
-.confirm-friend-button {
-    background-color: #FF096C;
-    color: white;
-}
-
-.confirm-friend-button:hover {
-    background-color: #e00860;
-}
-
-/* Стили для уведомлений */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background-color: #FF096C;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateY(-30px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.notification.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Анимация для новых сообщений */
-.message {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: messageAppear 0.3s forwards;
-}
-
-@keyframes messageAppear {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Анимация для новых друзей */
-.friend-item.new-friend {
-    animation: friendAppear 0.4s ease-out;
-}
-
-@keyframes friendAppear {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Плавный скролл в чате */
-.chat-messages {
-    scroll-behavior: smooth;
-    overflow-anchor: auto;
-}
-
-/* Индикатор нового сообщения */
-.unread-indicator {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #FF096C;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.friend-item.has-unread .unread-indicator {
-    opacity: 1;
-}
-
-/* Анимация кнопок */
-.sidebar-button, .videochat-button, .send-button {
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-.sidebar-button:active, .videochat-button:active, .send-button:active {
-    transform: scale(0.95);
-}
-
-/* Подсветка активного чата */
-.friend-item.active {
-    background-color: #333;
-    border-left: 3px solid #FF096C;
-}
-
-/* Плавное изменение размера textarea */
-.chat-input textarea {
-    transition: height 0.2s ease-out;
-}
-
-/* Адаптивные стили */
-@media (max-width: 768px) {
-    .friends-sidebar {
-        width: 200px;
-    }
-
-    .add-friend-container.active {
-        padding: 10px 15px;
-    }
-
-    .message {
-        max-width: 85%;
-    }
 }

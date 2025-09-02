@@ -1,3 +1,4 @@
+import com.sun.net.httpserver.Request;
 import http.httpdiff.HttpRequest;
 import http.httpdiff.HttpResponse;
 import http.middleware.CharsetMiddleware;
@@ -155,6 +156,215 @@ public class Main {
         setupRefreshTokenRoute(router);
         setupUserInfoRoute(router);
         setupValidateTokenRoute(router);
+        setupSearchUsersRoute(router);
+        setupCreateChatRoute(router);
+    }
+
+    private static void setupSearchUsersRoute(Router router) {
+        router.get("/api/search-users", (req, res) -> {
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                String token = getAuthTokenFromRequest(req);
+                int currentUserId = getUserIdFromToken(conn, token);
+
+                if (currentUserId == -1) {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Unauthorized", 401);
+                }
+
+                Map<String, String> queryParams = getQueryParams(req);
+                String query = queryParams.get("q");
+
+                if (query == null || query.trim().isEmpty()) {
+                    res.addHeader("Content-Type", "application/json");
+                    return JsonBuilder.build(Map.of("users", List.of()));
+                }
+
+                String sql = """
+                SELECT user_id, user_name, status, email 
+                FROM users 
+                WHERE user_name ILIKE ? 
+                AND user_id != ?
+                AND user_id NOT IN (
+                    SELECT blocked_id FROM user_blocks WHERE blocker_id = ?
+                    UNION
+                    SELECT blocker_id FROM user_blocks WHERE blocked_id = ?
+                )
+                LIMIT 10
+            """;
+
+                List<Map<String, Object>> users = new ArrayList<>();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, "%" + query + "%");
+                    stmt.setInt(2, currentUserId);
+                    stmt.setInt(3, currentUserId);
+                    stmt.setInt(4, currentUserId);
+
+                    ResultSet rs = stmt.executeQuery();
+
+                    while (rs.next()) {
+                        Map<String, Object> user = new HashMap<>();
+                        user.put("id", rs.getInt("user_id"));
+                        user.put("username", rs.getString("user_name"));
+                        user.put("status", rs.getString("status"));
+                        user.put("email", rs.getString("email"));
+                        users.add(user);
+                    }
+                }
+
+                res.addHeader("Content-Type", "application/json");
+                return JsonBuilder.build(Map.of("users", users));
+
+            } catch (Exception e) {
+                System.err.println("Search users error: " + e.getMessage());
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Server error", 500);
+            }
+        });
+    }
+
+    private static void setupCreateChatRoute(Router router) {
+        router.post("/api/create-chat", (req, res) -> {
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                String token = getAuthTokenFromRequest(req);
+                int currentUserId = getUserIdFromToken(conn, token);
+
+                if (currentUserId == -1) {
+                    res.setStatusCode(401);
+                    return JsonXmlExample.getErrorResponse("Unauthorized", 401);
+                }
+
+                Map<String, Object> requestData = JsonParser.parse(req.getBody());
+                Integer targetUserId = (Integer) requestData.get("user_id");
+
+                if (targetUserId == null) {
+                    res.setStatusCode(400);
+                    return JsonXmlExample.getErrorResponse("user_id parameter required", 400);
+                }
+
+                // Проверяем, не заблокирован ли пользователь
+                String checkBlockSql = """
+                SELECT 1 FROM user_blocks 
+                WHERE (blocker_id = ? AND blocked_id = ?) 
+                OR (blocker_id = ? AND blocked_id = ?)
+            """;
+
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkBlockSql)) {
+                    checkStmt.setInt(1, currentUserId);
+                    checkStmt.setInt(2, targetUserId);
+                    checkStmt.setInt(3, targetUserId);
+                    checkStmt.setInt(4, currentUserId);
+
+                    if (checkStmt.executeQuery().next()) {
+                        res.setStatusCode(403);
+                        return JsonXmlExample.getErrorResponse("User is blocked", 403);
+                    }
+                }
+
+                // Проверяем, существует ли уже приватный чат
+                String checkChatSql = """
+                SELECT c.chat_id 
+                FROM chats c
+                JOIN chat_members cm1 ON c.chat_id = cm1.chat_id
+                JOIN chat_members cm2 ON c.chat_id = cm2.chat_id
+                WHERE c.chat_type = 'private'
+                AND cm1.user_id = ? AND cm2.user_id = ?
+                LIMIT 1
+            """;
+
+                Integer existingChatId = null;
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkChatSql)) {
+                    checkStmt.setInt(1, currentUserId);
+                    checkStmt.setInt(2, targetUserId);
+
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (rs.next()) {
+                        existingChatId = rs.getInt("chat_id");
+                    }
+                }
+
+                if (existingChatId != null) {
+                    res.addHeader("Content-Type", "application/json");
+                    return JsonBuilder.build(Map.of(
+                            "chat_id", existingChatId,
+                            "is_new", false
+                    ));
+                }
+
+                // Получаем имена пользователей для названия чата
+                String getUserNamesSql = "SELECT user_name FROM users WHERE user_id IN (?, ?)";
+                List<String> userNames = new ArrayList<>();
+
+                try (PreparedStatement stmt = conn.prepareStatement(getUserNamesSql)) {
+                    stmt.setInt(1, currentUserId);
+                    stmt.setInt(2, targetUserId);
+
+                    ResultSet rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        userNames.add(rs.getString("user_name"));
+                    }
+                }
+
+                String chatName = String.join(" и ", userNames);
+
+                // Создаем новый чат
+                String insertChatSql = """
+                INSERT INTO chats (chat_name, chat_type, created_by) 
+                VALUES (?, 'private', ?) 
+                RETURNING chat_id
+            """;
+
+                int newChatId;
+                try (PreparedStatement stmt = conn.prepareStatement(insertChatSql)) {
+                    stmt.setString(1, chatName);
+                    stmt.setInt(2, currentUserId);
+
+                    ResultSet rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        newChatId = rs.getInt("chat_id");
+                    } else {
+                        throw new SQLException("Failed to create chat");
+                    }
+                }
+
+                // Добавляем участников в чат
+                String insertMemberSql = "INSERT INTO chat_members (chat_id, user_id) VALUES (?, ?)";
+                try (PreparedStatement stmt = conn.prepareStatement(insertMemberSql)) {
+                    stmt.setInt(1, newChatId);
+                    stmt.setInt(2, currentUserId);
+                    stmt.executeUpdate();
+
+                    stmt.setInt(1, newChatId);
+                    stmt.setInt(2, targetUserId);
+                    stmt.executeUpdate();
+                }
+
+                // Создаем приветственное сообщение
+                String welcomeMessage = "Чат создан!";
+                String insertMessageSql = """
+                INSERT INTO messages (chat_id, sender_id, message_text) 
+                VALUES (?, ?, ?)
+            """;
+
+                try (PreparedStatement stmt = conn.prepareStatement(insertMessageSql)) {
+                    stmt.setInt(1, newChatId);
+                    stmt.setInt(2, currentUserId);
+                    stmt.setString(3, welcomeMessage);
+                    stmt.executeUpdate();
+                }
+
+                res.addHeader("Content-Type", "application/json");
+                return JsonBuilder.build(Map.of(
+                        "chat_id", newChatId,
+                        "chat_name", chatName,
+                        "is_new", true
+                ));
+
+            } catch (Exception e) {
+                System.err.println("Create chat error: " + e.getMessage());
+                res.setStatusCode(500);
+                return JsonXmlExample.getErrorResponse("Server error", 500);
+            }
+        });
     }
     private static void setupValidateTokenRoute(Router router) {
         router.post("/api/validate-token", (req, res) -> {

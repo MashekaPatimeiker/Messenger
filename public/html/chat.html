@@ -24,17 +24,18 @@
 <div class="friends-sidebar">
     <div class="friends-header">
         <h2>Друзья</h2>
+        <button class="search-friend-button" id="search-friend-button" title="Найти друга">
+            <span class="icon">🔍</span>
+        </button>
     </div>
 
-    <!-- Контейнер для добавления друга -->
-    <div class="add-friend-container" id="add-friend-container">
-        <input type="text" class="add-friend-input" id="friend-username" placeholder="Введите ник друга">
-        <div class="add-friend-actions">
-            <button class="add-friend-button cancel-friend-button" id="cancel-add-friend">Отмена</button>
-            <button class="add-friend-button confirm-friend-button" id="confirm-add-friend">Добавить</button>
-        </div>
+    <!-- Поиск друзей -->
+    <div class="search-container" id="search-container" style="display: none;">
+        <input type="text" class="search-input" id="search-username" placeholder="Введите имя пользователя">
+        <div class="search-results" id="search-results"></div>
     </div>
 
+    <!-- Список друзей -->
     <ul class="friends-list" id="friends-list"></ul>
 </div>
 
