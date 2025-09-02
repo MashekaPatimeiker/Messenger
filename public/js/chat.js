@@ -7,7 +7,10 @@ let websocket = null;
 let isWebSocketConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-
+let searchContainer = null;
+let searchInput = null;
+let searchResults = null;
+let searchFriendButton = null;
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -295,7 +298,142 @@ function handleNewMessage(data) {
         loadChatsHTTP();
     }
 }
+// Добавьте функцию для настройки поиска
+function setupSearchFunctionality() {
+    searchContainer = document.getElementById('search-container');
+    searchInput = document.getElementById('search-username');
+    searchResults = document.getElementById('search-results');
+    searchFriendButton = document.getElementById('search-friend-button');
 
+    if (searchFriendButton && searchInput) {
+        searchFriendButton.addEventListener('click', toggleSearch);
+        searchInput.addEventListener('input', debounce(handleSearch, 300));
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+    }
+}
+function toggleSearch() {
+    if (searchContainer.style.display === 'none') {
+        searchContainer.style.display = 'block';
+        searchInput.focus();
+    } else {
+        searchContainer.style.display = 'none';
+        searchResults.innerHTML = '';
+    }
+}
+
+// Функция для поиска пользователей
+async function handleSearch() {
+    const query = searchInput.value.trim();
+    if (!query) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    try {
+        const users = await searchUsersAPI(query);
+        displaySearchResults(users);
+    } catch (error) {
+        console.error('Search error:', error);
+        showNotification('Ошибка поиска');
+    }
+}
+
+async function searchUsersAPI(query) {
+    try {
+        const data = await apiRequest(`/api/search-users?q=${encodeURIComponent(query)}`);
+        return data.users || [];
+    } catch (error) {
+        console.error('Search API error:', error);
+        return [];
+    }
+}
+
+function displaySearchResults(users) {
+    searchResults.innerHTML = '';
+
+    if (users.length === 0) {
+        searchResults.innerHTML = '<div class="no-results">Пользователи не найдены</div>';
+        return;
+    }
+
+    users.forEach(user => {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'search-result-item';
+        resultItem.innerHTML = `
+            <div class="search-result-avatar">${user.username.charAt(0)}</div>
+            <div class="search-result-info">
+                <div class="search-result-name">${escapeHtml(user.username)}</div>
+                <div class="search-result-status">${user.status || 'offline'}</div>
+            </div>
+        `;
+
+        resultItem.addEventListener('click', () => startChatWithUser(user));
+        searchResults.appendChild(resultItem);
+    });
+}
+
+// Функция для начала чата с пользователем
+async function startChatWithUser(user) {
+    try {
+        const chatData = await createOrGetPrivateChatAPI(user.id);
+
+        if (chatData && chatData.chat_id) {
+            // Добавляем чат в список
+            if (!chatsData.find(c => c.chat_id === chatData.chat_id)) {
+                chatsData.push({
+                    chat_id: chatData.chat_id,
+                    chat_name: user.username,
+                    chat_type: 'private',
+                    last_message: '',
+                    last_message_time: new Date().toISOString()
+                });
+            }
+
+            // Выбираем чат
+            await selectChat(chatData.chat_id);
+
+            // Скрываем поиск
+            searchContainer.style.display = 'none';
+            searchInput.value = '';
+            searchResults.innerHTML = '';
+
+            showNotification(`Чат с ${user.username} начат`);
+        }
+    } catch (error) {
+        console.error('Error starting chat:', error);
+        showNotification('Ошибка создания чата');
+    }
+}
+
+async function createOrGetPrivateChatAPI(userId) {
+    try {
+        const data = await apiRequest('/api/create-chat', {
+            method: 'POST',
+            body: JSON.stringify({ user_id: userId })
+        });
+        return data;
+    } catch (error) {
+        console.error('Create chat API error:', error);
+        throw error;
+    }
+}
+
+// Функция для debounce (задержки поиска)
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 async function loadChatsHTTP() {
     try {
         chatsData = await loadChatsAPI();
@@ -520,9 +658,9 @@ async function init() {
         console.log('Initializing chat application...');
         await loadUserData();
         setupEventListeners();
+        setupSearchFunctionality(); // Добавьте эту строку
 
         setTimeout(connectWebSocket, 1000);
-
         await loadChatsHTTP();
 
         console.log('Chat application initialized successfully');
